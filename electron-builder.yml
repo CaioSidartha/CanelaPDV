@@ -1,6 +1,7 @@
 {
-  "appId": "com.padariamaxima.pdv",
+  "appId": "com.canela.store",
   "productName": "Canela Store",
+  "copyright": "Copyright © Canela",
   "directories": {
     "output": "dist-electron"
   },
@@ -25,6 +26,8 @@
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
-    "shortcutName": "PDV Padaria"
+    "shortcutName": "Canela Store",
+    "installerIcon": "public/brand/canela-icon.png",
+    "uninstallerIcon": "public/brand/canela-icon.png"
   }
 }

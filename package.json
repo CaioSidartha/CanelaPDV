@@ -1,6 +1,8 @@
 {
   "name": "sistema-padaria",
   "version": "0.2.0",
+  "description": "Canela Store — PDV, estoque e gestão para padarias",
+  "author": "Canela",
   "private": true,
   "engines": {
     "node": "20.x"
@@ -19,6 +21,7 @@
     "electron:dev": "electron .",
     "desktop:dev": "node electron/dev-runner.js",
     "dist:win": "electron-builder --win --config electron-builder.yml",
+    "release:win": "npm run build && npm run dist:win",
     "db:migrate": "node --env-file=.env scripts/db-migrate.mjs",
     "db:seed": "node --env-file=.env scripts/db-seed.mjs",
     "db:push": "drizzle-kit push"
