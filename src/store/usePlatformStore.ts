@@ -334,6 +334,12 @@ export const usePlatformStore = create<PlatformStore>()(
           if (res.ok && payload.tenant) {
             id = payload.tenant.id;
             serverSynced = true;
+          } else if (res.status === 401) {
+            return {
+              ok: false,
+              error:
+                "Sessão do servidor expirou ou você entrou só no modo local. Clique em Sair no painel e faça login de novo em /platform/login (master@canela.local).",
+            };
           } else if (res.status !== 503) {
             return { ok: false, error: payload.error ?? "Não foi possível criar a conta no servidor." };
           }

@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { usePlatformStore } from "@/store/usePlatformStore";
 import type { CommercialPlanId, PlatformTenantKind, TenantDeployMode } from "@/types/platform";
+import { digitsOnly, maskDocumentInput, type DocumentKind } from "@/lib/format-document";
 import { defaultCapabilities } from "@/lib/tenant-snapshot";
+
+const PLATFORM_FIELD = "border-stone-700 bg-stone-900/80 text-stone-100 placeholder:text-stone-500";
 
 type Props = {
   kind: PlatformTenantKind;
@@ -26,6 +29,7 @@ function slugFromName(name: string) {
 export function CreateTenantModal({ kind, onClose, onCreated }: Props) {
   const createTenant = usePlatformStore((s) => s.createTenant);
   const [name, setName] = useState("");
+  const [docKind, setDocKind] = useState<DocumentKind>("cnpj");
   const [document, setDocument] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
@@ -49,8 +53,21 @@ export function CreateTenantModal({ kind, onClose, onCreated }: Props) {
     }
   }, [suggestedEmail, emailTouched, name]);
 
+  const onDocKindChange = (next: DocumentKind) => {
+    setDocKind(next);
+    const d = digitsOnly(document);
+    const max = next === "cpf" ? 11 : 14;
+    setDocument(maskDocumentInput(d.slice(0, max), next));
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const docDigits = digitsOnly(document);
+    const expectedLen = docKind === "cpf" ? 11 : 14;
+    if (docDigits.length !== expectedLen) {
+      setErr(docKind === "cpf" ? "CPF deve ter 11 dígitos." : "CNPJ deve ter 14 dígitos.");
+      return;
+    }
     if (adminPassword !== adminPassword2) {
       setErr("As senhas não coincidem.");
       return;
@@ -102,15 +119,36 @@ export function CreateTenantModal({ kind, onClose, onCreated }: Props) {
         <div className="mt-5 space-y-3">
           <div>
             <label className="mb-1 block text-xs font-semibold text-stone-500">Nome da empresa</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} className="border-stone-700 bg-stone-900/80" required />
+            <Input value={name} onChange={(e) => setName(e.target.value)} className={PLATFORM_FIELD} required />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-stone-500">CPF ou CNPJ</label>
+            <div className="mb-2 flex flex-wrap items-center gap-4">
+              <span className="text-xs font-semibold text-stone-500">Documento</span>
+              <label className="flex items-center gap-2 text-sm text-stone-300">
+                <input
+                  type="radio"
+                  name="docKind"
+                  checked={docKind === "cpf"}
+                  onChange={() => onDocKindChange("cpf")}
+                />
+                CPF
+              </label>
+              <label className="flex items-center gap-2 text-sm text-stone-300">
+                <input
+                  type="radio"
+                  name="docKind"
+                  checked={docKind === "cnpj"}
+                  onChange={() => onDocKindChange("cnpj")}
+                />
+                CNPJ
+              </label>
+            </div>
             <Input
               value={document}
-              onChange={(e) => setDocument(e.target.value)}
-              placeholder="Somente números ou formatado"
-              className="border-stone-700 bg-stone-900/80"
+              onChange={(e) => setDocument(maskDocumentInput(e.target.value, docKind))}
+              placeholder={docKind === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
+              inputMode="numeric"
+              className={PLATFORM_FIELD}
               required
             />
           </div>
@@ -125,7 +163,7 @@ export function CreateTenantModal({ kind, onClose, onCreated }: Props) {
                   setEmailTouched(true);
                   setAdminEmail(e.target.value);
                 }}
-                className="border-stone-700 bg-stone-900/80"
+                className={PLATFORM_FIELD}
                 required
                 autoComplete="off"
               />
@@ -136,7 +174,7 @@ export function CreateTenantModal({ kind, onClose, onCreated }: Props) {
                 type="password"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
-                className="border-stone-700 bg-stone-900/80"
+                className={PLATFORM_FIELD}
                 required
                 minLength={6}
                 autoComplete="new-password"
@@ -148,7 +186,7 @@ export function CreateTenantModal({ kind, onClose, onCreated }: Props) {
                 type="password"
                 value={adminPassword2}
                 onChange={(e) => setAdminPassword2(e.target.value)}
-                className="border-stone-700 bg-stone-900/80"
+                className={PLATFORM_FIELD}
                 required
                 minLength={6}
                 autoComplete="new-password"

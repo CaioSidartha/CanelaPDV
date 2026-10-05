@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -10,6 +10,11 @@ import { usePlatformStore } from "@/store/usePlatformStore";
 export default function PlatformLoginPage() {
   const login = usePlatformStore((s) => s.login);
   const router = useRouter();
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  useEffect(() => {
+    setSessionExpired(new URLSearchParams(window.location.search).get("reason") === "session");
+  }, []);
   const [email, setEmail] = useState("master@canela.local");
   const [password, setPassword] = useState("master123");
   const [busy, setBusy] = useState(false);
@@ -37,6 +42,12 @@ export default function PlatformLoginPage() {
         <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-600">{PRODUCT_NAME}</p>
         <h1 className="mt-1 font-display text-2xl font-semibold text-stone-50">Painel master</h1>
         <p className="mt-2 text-sm text-stone-500">Contas, testes, cobrança simulada e leads do site.</p>
+
+        {sessionExpired && (
+          <p className="mt-4 rounded-lg border border-amber-700/40 bg-amber-950/40 px-3 py-2 text-sm text-amber-100">
+            Sua sessão no servidor expirou. Entre de novo para criar contas que funcionem no login da loja.
+          </p>
+        )}
 
         <div className="mt-6 space-y-4">
           <div>
