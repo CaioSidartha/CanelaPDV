@@ -1,0 +1,7 @@
+{
+  "simpleBrowser.focusLockIndicator.enabled": false,
+  "npm.enableScriptExplorer": true,
+  "files.watcherExclude": {
+    "**/.next/**": true
+  }
+}

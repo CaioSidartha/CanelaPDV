@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Padaria — Chrome (Next já rodando)",
+            "url": "http://localhost:3000/login",
+            "webRoot": "${workspaceFolder}"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Padaria — subir Next + Chrome",
+            "url": "http://localhost:3000/login",
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "Padaria: Next (porta 3000)"
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+  "appId": "com.padariamaxima.pdv",
+  "productName": "Sistema PDV Padaria",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "electron/**/*",
+    "package.json",
+    ".next/**/*",
+    "public/**/*",
+    "node_modules/**/*",
+    "!node_modules/.cache/**/*"
+  ],
+  "extraResources": [],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "shortcutName": "PDV Padaria"
+  }
+}

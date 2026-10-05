@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc>
+  <NFe>
+    <infNFe Id="NFe35251012345678000199550010000048291123456780" versao="4.00">
+      <ide>
+        <cUF>35</cUF>
+        <nNF>4829</nNF>
+        <dhEmi>2026-10-01T08:30:00-03:00</dhEmi>
+      </ide>
+      <emit>
+        <CNPJ>12345678000199</CNPJ>
+        <xNome>Moinho Sao Jose Ltda</xNome>
+        <IE>123456789012</IE>
+      </emit>
+      <det nItem="1">
+        <prod>
+          <cEAN>7891000315507</cEAN>
+          <xProd>Farinha de trigo especial 25kg</xProd>
+          <NCM>11010010</NCM>
+          <CFOP>1101</CFOP>
+          <uCom>SC</uCom>
+          <qCom>3.0000</qCom>
+          <vUnCom>89.0000</vUnCom>
+          <vProd>267.00</vProd>
+        </prod>
+      </det>
+      <det nItem="2">
+        <prod>
+          <cEAN>7891910000197</cEAN>
+          <xProd>Cafe moido 500g</xProd>
+          <NCM>09012100</NCM>
+          <CFOP>1102</CFOP>
+          <uCom>UN</uCom>
+          <qCom>12.0000</qCom>
+          <vUnCom>14.2000</vUnCom>
+          <vProd>170.40</vProd>
+        </prod>
+      </det>
+      <det nItem="3">
+        <prod>
+          <cEAN>7891000248741</cEAN>
+          <xProd>Detergente neutro 500ml</xProd>
+          <NCM>34025000</NCM>
+          <CFOP>1556</CFOP>
+          <uCom>UN</uCom>
+          <qCom>6.0000</qCom>
+          <vUnCom>3.4000</vUnCom>
+          <vProd>20.40</vProd>
+        </prod>
+      </det>
+      <total>
+        <ICMSTot>
+          <vNF>457.80</vNF>
+        </ICMSTot>
+      </total>
+      <cobr>
+        <dup>
+          <nDup>001</nDup>
+          <dVenc>2026-10-13</dVenc>
+          <vDup>457.80</vDup>
+        </dup>
+      </cobr>
+    </infNFe>
+  </NFe>
+</nfeProc>

@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 0.5rem;
+
+  /* Canela — bancada quente (café / canela / creme) */
+  --background: #2a2118;
+  --foreground: #faf6f1;
+  --surface: #332a20;
+  --surface-2: #3d3226;
+  --card: #332a20;
+  --card-foreground: #faf6f1;
+  --popover: #332a20;
+  --popover-foreground: #faf6f1;
+  --primary: #d97706;
+  --primary-foreground: #fffbf5;
+  --secondary: #3d3226;
+  --secondary-foreground: #e8dfd4;
+  --muted: #3a3028;
+  --muted-foreground: #c4b5a0;
+  --accent: #f59e0b;
+  --accent-foreground: #2a2118;
+  --destructive: #c45c4a;
+  --destructive-foreground: #faf6f1;
+  --success: #6b9b6e;
+  --success-foreground: #1a241c;
+  --warning: #f59e0b;
+  --warning-foreground: #2a2118;
+  --info: #a68b6a;
+  --border: #4a3f32;
+  --input: #241e17;
+  --ring: #d97706;
+  --sidebar: #241e17;
+  --sidebar-foreground: #faf6f1;
+  --sidebar-primary: #d97706;
+  --sidebar-primary-foreground: #fffbf5;
+  --sidebar-accent: #332a20;
+  --sidebar-accent-foreground: #faf6f1;
+  --sidebar-border: #4a3f32;
+  --sidebar-ring: #d97706;
+
+  --canvas: var(--background);
+  --canvas-elevated: var(--surface);
+  --brand: var(--primary);
+  --brand-foreground: var(--primary-foreground);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    color: var(--foreground);
+    background: var(--background);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+    letter-spacing: 0;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.font-display.font-semibold,
+.font-display.font-bold,
+.font-display.font-extrabold {
+  font-weight: 600;
+}
+
+@layer components {
+  .panel-glass,
+  .caixa-glass {
+    @apply relative overflow-hidden rounded-lg border backdrop-blur-xl;
+    border-color: color-mix(in srgb, var(--border) 85%, transparent);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: inset 0 1px 0 0 rgba(250, 246, 241, 0.04);
+  }
+  .panel-glass::before,
+  .caixa-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      125deg,
+      rgba(250, 246, 241, 0.05) 0%,
+      transparent 42%,
+      color-mix(in oklab, var(--primary) 12%, transparent) 100%
+    );
+    pointer-events: none;
+  }
+  .panel-glass-inner,
+  .caixa-glass-inner {
+    @apply relative z-[1];
+  }
+  .caixa-field-label {
+    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-wider;
+    color: var(--muted-foreground);
+  }
+
+  .table-glass {
+    @apply overflow-hidden rounded-lg border backdrop-blur-md;
+    border-color: color-mix(in srgb, var(--border) 85%, transparent);
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
+  }
+  .table-glass thead {
+    @apply border-b;
+    border-color: color-mix(in srgb, var(--border) 85%, transparent);
+    background: color-mix(in srgb, var(--background) 80%, transparent);
+    color: var(--muted-foreground);
+  }
+  .table-glass tbody tr {
+    @apply border-b;
+    border-color: color-mix(in srgb, var(--border) 50%, transparent);
+    color: var(--foreground);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}
