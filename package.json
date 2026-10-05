@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   },
   "main": "electron/main.js",
   "scripts": {
@@ -11,6 +11,7 @@
     "dev:plain": "next dev",
     "dev:turbo": "next dev --turbopack",
     "dev:clean": "node scripts/dev-web.mjs --clean",
+    "prebuild": "node -e \"try{require('tailwindcss')}catch(e){console.log('Instalando devDependencies para o build…');require('child_process').execSync('npm install --include=dev --no-audit --no-fund',{stdio:'inherit'})}\"",
     "build": "next build",
     "build:render": "npm ci --include=dev && npm run build",
     "start": "next start",
