@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, ImagePlus, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { HardwareSettingsPanel } from "@/components/config/HardwareSettingsPanel";
@@ -10,11 +10,17 @@ import { Input } from "@/components/ui/Input";
 import { effectiveUnitPrice } from "@/lib/product-catalog";
 import { newEntityId } from "@/lib/id";
 import { formatBRL } from "@/lib/utils";
+import { TenantAppSettings } from "@/components/tenant/TenantAppSettings";
 import { useAppStore } from "@/store/useAppStore";
 import type { Product, WeightPriceConfig } from "@/types";
 
 export default function ConfiguracoesPage() {
-  const [tab, setTab] = useState<"empresa" | "peso" | "produtos" | "hardwares">("empresa");
+  const [tab, setTab] = useState<"empresa" | "peso" | "produtos" | "hardwares" | "app">("empresa");
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("tab");
+    if (q === "app") setTab("app");
+  }, []);
   const [editor, setEditor] = useState<{ mode: "create" | "edit"; product: Product | null }>({
     mode: "create",
     product: null,
@@ -103,6 +109,7 @@ export default function ConfiguracoesPage() {
             ["peso", "Preços no peso"],
             ["produtos", "Produtos"],
             ["hardwares", "Hardwares"],
+            ["app", "App e offline"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -245,6 +252,8 @@ export default function ConfiguracoesPage() {
       )}
 
       {tab === "hardwares" && <HardwareSettingsPanel />}
+
+      {tab === "app" && <TenantAppSettings />}
 
       {tab === "produtos" && (
         <section>

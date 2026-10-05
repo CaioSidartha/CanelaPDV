@@ -40,7 +40,7 @@ import {
   writeTenantWorkspace,
 } from "@/lib/tenant-snapshot";
 import { buildFreshTenantWorkspace } from "@/lib/tenant-workspace";
-import type { PlatformTenant } from "@/types/platform";
+import type { PlatformTenant, TenantCapabilities } from "@/types/platform";
 import { usePlatformStore } from "@/store/usePlatformStore";
 import type {
   AppUser,
@@ -138,6 +138,8 @@ type AppStore = {
   punches: TimePunch[];
   sidebarCollapsed: boolean;
   hardware: HardwareSettings;
+  /** Contrato/plano (modo online-offline, fiscal, etc.) — vem do painel master no workspace. */
+  tenantCapabilities?: TenantCapabilities;
 
   login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => void;
@@ -533,6 +535,7 @@ function workspaceBlobFromState(state: AppStore): Record<string, unknown> {
     sidebarCollapsed: state.sidebarCollapsed,
     hardware: state.hardware,
     catalogLayoutVersion: CATALOG_LAYOUT_VERSION,
+    tenantCapabilities: state.tenantCapabilities,
   };
 }
 
@@ -668,20 +671,21 @@ export const useAppStore = create<AppStore>()(
                   role: string;
                 };
                 const fromPlatform = usePlatformStore.getState().getTenant(tenantId);
-                const tenant: PlatformTenant = fromPlatform ?? {
-                  id: boot.tenantId,
-                  kind: boot.kind,
-                  status: "active",
-                  name: boot.name,
-                  document: boot.document,
-                  planId: boot.planId as PlatformTenant["planId"],
-                  monthlyFee: boot.monthlyFee,
-                  setupFee: 0,
-                  capabilities: defaultCapabilities(),
-                  branding: {},
-                  adminEmail: boot.email,
-                  createdAt: new Date().toISOString(),
-                };
+                const tenant: PlatformTenant =
+                  fromPlatform ?? {
+                    id: boot.tenantId,
+                    kind: boot.kind,
+                    status: "active",
+                    name: boot.name,
+                    document: boot.document,
+                    planId: boot.planId as PlatformTenant["planId"],
+                    monthlyFee: boot.monthlyFee,
+                    setupFee: 0,
+                    capabilities: defaultCapabilities(),
+                    branding: {},
+                    adminEmail: boot.email,
+                    createdAt: new Date().toISOString(),
+                  };
                 const workspace = await buildFreshTenantWorkspace(tenant, password, profile.sub);
                 const admin = workspace.users[0];
                 if (admin) {

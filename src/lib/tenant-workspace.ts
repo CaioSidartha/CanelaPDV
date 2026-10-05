@@ -1,5 +1,4 @@
 import { defaultCompany, defaultWeightPrices } from "@/data/seed";
-import { demoSales } from "@/data/demo-stock";
 import { defaultHardwareSettings } from "@/lib/hardware/defaults";
 import { newEntityId } from "@/lib/id";
 import { hashPassword } from "@/lib/password";
@@ -50,7 +49,8 @@ export async function buildFreshTenantWorkspace(
     weightPrices: defaultWeightPrices,
     comandas: [],
     comandaAudit: [],
-    sales: demoSales.map((s) => ({ ...s, tenantId: tenant.id, empresaId })),
+    sales: [],
+    tenantCapabilities: tenant.capabilities,
     stockLedger: [],
     suppliers: [],
     goodsReceipts: [],
