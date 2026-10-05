@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,11 @@ import { usePlatformStore } from "@/store/usePlatformStore";
 export default function PlatformTenantsPage() {
   const tenants = usePlatformStore((s) => s.tenants);
   const billing = usePlatformStore((s) => s.billing);
+  const hydrateTenantsFromServer = usePlatformStore((s) => s.hydrateTenantsFromServer);
+
+  useEffect(() => {
+    void hydrateTenantsFromServer();
+  }, [hydrateTenantsFromServer]);
   const [modal, setModal] = useState<"test" | "production" | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -34,8 +39,9 @@ export default function PlatformTenantsPage() {
       </div>
 
       {flash && (
-        <div className="rounded-lg border border-amber-700/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-100 whitespace-pre-wrap">
-          {flash}
+        <div className="rounded-lg border border-emerald-800/50 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-50">
+          <p className="font-medium text-emerald-200">Conta criada com sucesso</p>
+          <p className="mt-2 text-stone-300 whitespace-pre-wrap">{flash}</p>
         </div>
       )}
 
@@ -82,7 +88,7 @@ export default function PlatformTenantsPage() {
           onClose={() => setModal(null)}
           onCreated={(info) => {
             setFlash(
-              `Conta criada.\nLogin: ${info.adminEmail}\nSenha: ${info.adminPassword}\n\nUse /login no app da loja.`,
+              `Login: ${info.adminEmail}\nSenha: ${info.adminPassword}\n\nEntre em /login (app da loja). Contas novas já validam no servidor.`,
             );
           }}
         />

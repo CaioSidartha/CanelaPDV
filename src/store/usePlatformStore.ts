@@ -6,7 +6,7 @@ import { newEntityId } from "@/lib/id";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { defaultCapabilities } from "@/lib/tenant-snapshot";
 import { buildFreshTenantWorkspace } from "@/lib/tenant-workspace";
-import { writeTenantWorkspace } from "@/lib/tenant-snapshot";
+import { deleteTenantWorkspace, writeTenantWorkspace } from "@/lib/tenant-snapshot";
 import type {
   BillingEntry,
   BillingEntryStatus,
@@ -42,6 +42,7 @@ type PlatformStore = {
   setLeadNotifyEmail: (email: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   hydrateSettingsFromServer: () => Promise<void>;
   hydrateLeadsFromServer: () => Promise<void>;
+  hydrateTenantsFromServer: () => Promise<void>;
   login: (email: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => void;
 
@@ -55,11 +56,12 @@ type PlatformStore = {
     setupFee?: number;
     capabilities?: Partial<TenantCapabilities>;
     contactEmail?: string;
-    adminPassword?: string;
+    adminEmail: string;
+    adminPassword: string;
   }) => Promise<{ ok: true; tenant: PlatformTenant; adminPassword: string } | { ok: false; error: string }>;
 
   updateTenant: (id: string, patch: Partial<Omit<PlatformTenant, "id" | "createdAt" | "adminEmail">>) => void;
-  removeTenant: (id: string) => void;
+  removeTenant: (id: string) => Promise<{ ok: true } | { ok: false; error: string }>;
 
   addBillingEntry: (entry: Omit<BillingEntry, "id" | "createdAt">) => void;
   setBillingStatus: (id: string, status: BillingEntryStatus, paidAt?: string) => void;
@@ -205,6 +207,32 @@ export const usePlatformStore = create<PlatformStore>()(
         }
       },
 
+      hydrateTenantsFromServer: async () => {
+        try {
+          const res = await fetch("/api/platform/tenants", { credentials: "include" });
+          if (!res.ok) return;
+          const data = (await res.json()) as { tenants?: PlatformTenant[] };
+          if (!data.tenants?.length) return;
+          set((state) => {
+            const byId = new Map(state.tenants.map((t) => [t.id, t]));
+            for (const row of data.tenants!) {
+              const prev = byId.get(row.id);
+              byId.set(row.id, {
+                ...prev,
+                ...row,
+                capabilities: prev?.capabilities ?? row.capabilities,
+                branding: prev?.branding ?? row.branding ?? {},
+                setupFee: prev?.setupFee ?? row.setupFee ?? 0,
+                notes: prev?.notes ?? row.notes,
+              });
+            }
+            return { tenants: [...byId.values()] };
+          });
+        } catch {
+          /* offline */
+        }
+      },
+
       login: async (email, password) => {
         const trimmed = email.trim();
         try {
@@ -229,6 +257,7 @@ export const usePlatformStore = create<PlatformStore>()(
             });
             await get().hydrateSettingsFromServer();
             await get().hydrateLeadsFromServer();
+            await get().hydrateTenantsFromServer();
             return { ok: true };
           }
           if (res.status !== 503 || !data.fallbackLocal) {
@@ -270,15 +299,47 @@ export const usePlatformStore = create<PlatformStore>()(
           return { ok: false, error: "CPF (11 dígitos) ou CNPJ (14 dígitos)." };
         }
         const slug = slugFromName(name);
-        const id = input.kind === "test" ? `tenant-test-${slug}-${Date.now().toString(36)}` : newEntityId("tenant");
         const plan = input.planId === "custom"
           ? { monthlyFee: input.monthlyFee ?? 500, setupFee: input.setupFee ?? 0 }
           : PLAN_PRESETS[input.planId];
-        const adminEmail =
-          input.contactEmail?.trim() ||
-          `admin@${slug}.${input.kind === "test" ? "teste" : "loja"}.local`;
-        const exists = get().tenants.some((t) => t.adminEmail.toLowerCase() === adminEmail.toLowerCase());
+        const adminEmail = input.adminEmail.trim().toLowerCase();
+        const adminPassword = input.adminPassword.trim();
+        if (!adminEmail || !adminEmail.includes("@")) {
+          return { ok: false, error: "Informe um e-mail de acesso válido." };
+        }
+        if (adminPassword.length < 6) {
+          return { ok: false, error: "Senha mínima: 6 caracteres." };
+        }
+        const exists = get().tenants.some((t) => t.adminEmail.toLowerCase() === adminEmail);
         if (exists) return { ok: false, error: "Já existe conta com este e-mail de admin." };
+
+        let id = input.kind === "test" ? `tenant-test-${slug}-${Date.now().toString(36)}` : newEntityId("tenant");
+        let serverSynced = false;
+        try {
+          const res = await fetch("/api/platform/tenants", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              kind: input.kind,
+              name,
+              document: doc,
+              planId: input.planId,
+              monthlyFee: input.monthlyFee,
+              adminEmail,
+              adminPassword,
+            }),
+          });
+          const payload = (await res.json()) as { error?: string; tenant?: { id: string; adminEmail: string } };
+          if (res.ok && payload.tenant) {
+            id = payload.tenant.id;
+            serverSynced = true;
+          } else if (res.status !== 503) {
+            return { ok: false, error: payload.error ?? "Não foi possível criar a conta no servidor." };
+          }
+        } catch {
+          /* cria só local se a API estiver fora */
+        }
 
         const tenant: PlatformTenant = {
           id,
@@ -294,10 +355,13 @@ export const usePlatformStore = create<PlatformStore>()(
           branding: {},
           adminEmail,
           createdAt: new Date().toISOString(),
-          notes: input.kind === "test" ? "Conta de teste — cobrança simulada." : undefined,
+          notes: input.kind === "test"
+            ? serverSynced
+              ? "Conta de teste — login validado no servidor."
+              : "Conta de teste — só neste navegador (servidor indisponível)."
+            : undefined,
         };
 
-        const adminPassword = input.adminPassword?.trim() || (input.kind === "test" ? "teste123" : "admin123");
         const workspace = await buildFreshTenantWorkspace(tenant, adminPassword);
         writeTenantWorkspace(tenant.id, workspace);
 
@@ -325,11 +389,29 @@ export const usePlatformStore = create<PlatformStore>()(
           ),
         })),
 
-      removeTenant: (id) =>
+      removeTenant: async (id) => {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+        if (isUuid) {
+          try {
+            const res = await fetch(`/api/platform/tenants/${id}`, {
+              method: "DELETE",
+              credentials: "include",
+            });
+            if (!res.ok && res.status !== 503) {
+              const data = (await res.json()) as { error?: string };
+              return { ok: false, error: data.error ?? "Não foi possível excluir no servidor." };
+            }
+          } catch {
+            return { ok: false, error: "Falha de rede ao excluir." };
+          }
+        }
+        deleteTenantWorkspace(id);
         set((state) => ({
           tenants: state.tenants.filter((t) => t.id !== id),
           billing: state.billing.filter((b) => b.tenantId !== id),
-        })),
+        }));
+        return { ok: true };
+      },
 
       addBillingEntry: (entry) =>
         set((state) => ({

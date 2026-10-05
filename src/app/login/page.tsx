@@ -129,6 +129,12 @@ export default function LoginPage() {
             <p className="mt-2">Admin: admin@loja.local / admin123</p>
             <p>Caixa: caixa@loja.local / caixa123</p>
           </details>
+          <p className="mt-4 text-center text-xs text-[var(--muted-foreground)]">
+            É da equipe Canela?{" "}
+            <Link href="/platform/login" className="font-medium text-brand hover:underline">
+              Painel master
+            </Link>
+          </p>
         </div>
       </div>
     </div>

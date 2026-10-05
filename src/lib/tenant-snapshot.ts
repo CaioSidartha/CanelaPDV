@@ -26,6 +26,11 @@ export function writeTenantWorkspace(tenantId: string, blob: TenantWorkspaceBlob
   localStorage.setItem(tenantStorageKey(tenantId), JSON.stringify(blob));
 }
 
+export function deleteTenantWorkspace(tenantId: string) {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(tenantStorageKey(tenantId));
+}
+
 export function modulesFromCapabilities(cap: TenantCapabilities): Record<TenantModuleName, boolean> {
   const base = defaultModules(cap.modules);
   if (!cap.fiscalEnabled) base.fiscal = false;

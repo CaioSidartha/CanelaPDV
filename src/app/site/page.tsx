@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { usePlatformStore } from "@/store/usePlatformStore";
 
+/** Campos claros no site: texto escuro (o Input padrão usa text-zinc-100). */
+const SITE_FIELD_CLASS =
+  "border-[#D4C4B0] bg-white text-[#1a1510] placeholder:text-[#6B5D4D] shadow-none focus:border-[#D97706] focus:ring-amber-500/30";
+
 export default function MarketingSitePage() {
   const recordSiteVisit = usePlatformStore((s) => s.recordSiteVisit);
   const addLead = usePlatformStore((s) => s.addLead);
@@ -231,7 +235,7 @@ export default function MarketingSitePage() {
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                     required
-                    className="border-[#E8DFD4] bg-[#FFFBF5]"
+                    className={SITE_FIELD_CLASS}
                   />
                   <Input
                     type="email"
@@ -239,25 +243,25 @@ export default function MarketingSitePage() {
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     required
-                    className="border-[#E8DFD4] bg-[#FFFBF5]"
+                    className={SITE_FIELD_CLASS}
                   />
                   <Input
                     placeholder="WhatsApp"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="border-[#E8DFD4] bg-[#FFFBF5]"
+                    className={SITE_FIELD_CLASS}
                   />
                   <Input
                     placeholder="Nome da padaria"
                     value={form.companyName}
                     onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-                    className="border-[#E8DFD4] bg-[#FFFBF5]"
+                    className={SITE_FIELD_CLASS}
                   />
                   <textarea
                     placeholder="Como podemos ajudar?"
                     value={form.message}
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    className="w-full rounded-xl border border-[#E8DFD4] bg-[#FFFBF5] px-3 py-2 text-sm"
+                    className={`w-full rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 ${SITE_FIELD_CLASS}`}
                     rows={3}
                   />
                   <label className="flex items-start gap-2 text-sm text-[#5C4D3C]">

@@ -33,7 +33,14 @@ import {
 } from "@/lib/product-catalog";
 import { nfeUnitToSaleUnit, saleUnitToFiscal } from "@/lib/product-sale-unit";
 import { defaultModules } from "@/lib/tenant-access";
-import { modulesFromCapabilities, readTenantWorkspace, writeTenantWorkspace } from "@/lib/tenant-snapshot";
+import {
+  defaultCapabilities,
+  modulesFromCapabilities,
+  readTenantWorkspace,
+  writeTenantWorkspace,
+} from "@/lib/tenant-snapshot";
+import { buildFreshTenantWorkspace } from "@/lib/tenant-workspace";
+import type { PlatformTenant } from "@/types/platform";
 import { usePlatformStore } from "@/store/usePlatformStore";
 import type {
   AppUser,
@@ -619,6 +626,113 @@ export const useAppStore = create<AppStore>()(
 
       login: async (email, password) => {
         const trimmed = email.trim().toLowerCase();
+
+        try {
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ email: trimmed, password, scope: "tenant" }),
+          });
+          const data = (await res.json()) as {
+            error?: string;
+            fallbackLocal?: boolean;
+            profile?: {
+              sub: string;
+              email: string;
+              name: string;
+              tenantId?: string;
+              role?: string;
+            };
+          };
+          if (res.ok && data.profile?.tenantId) {
+            const profile = data.profile;
+            const tenantId: string = data.profile.tenantId;
+            get().activateTenantWorkspace(tenantId);
+            let state = get();
+            const hasWorkspace = Boolean(readTenantWorkspace(tenantId));
+            const userInStore = state.users.find((u) => u.email.toLowerCase() === trimmed);
+
+            if (!hasWorkspace || !userInStore) {
+              const bootRes = await fetch("/api/tenant/bootstrap", { credentials: "include" });
+              if (bootRes.ok) {
+                const boot = (await bootRes.json()) as {
+                  tenantId: string;
+                  name: string;
+                  document: string;
+                  planId: string;
+                  monthlyFee: number;
+                  kind: PlatformTenant["kind"];
+                  email: string;
+                  userName: string;
+                  role: string;
+                };
+                const fromPlatform = usePlatformStore.getState().getTenant(tenantId);
+                const tenant: PlatformTenant = fromPlatform ?? {
+                  id: boot.tenantId,
+                  kind: boot.kind,
+                  status: "active",
+                  name: boot.name,
+                  document: boot.document,
+                  planId: boot.planId as PlatformTenant["planId"],
+                  monthlyFee: boot.monthlyFee,
+                  setupFee: 0,
+                  capabilities: defaultCapabilities(),
+                  branding: {},
+                  adminEmail: boot.email,
+                  createdAt: new Date().toISOString(),
+                };
+                const workspace = await buildFreshTenantWorkspace(tenant, password, profile.sub);
+                const admin = workspace.users[0];
+                if (admin) {
+                  admin.email = boot.email;
+                  admin.name = boot.userName;
+                  admin.role = (boot.role as AppUser["role"]) ?? "admin";
+                }
+                writeTenantWorkspace(tenantId, workspace);
+                get().activateTenantWorkspace(tenantId);
+                state = get();
+              }
+            }
+
+            const user =
+              state.users.find((u) => u.email.toLowerCase() === trimmed) ??
+              state.users.find((u) => u.id === profile.sub);
+            const platformTenant = usePlatformStore.getState().getTenant(tenantId);
+            const modules = platformTenant
+              ? modulesFromCapabilities(platformTenant.capabilities)
+              : defaultModules(state.auth.modules);
+            const role = (profile.role as AppUser["role"]) ?? user?.role ?? "admin";
+
+            const session: AuthSession = {
+              userId: user?.id ?? profile.sub,
+              email: profile.email,
+              name: profile.name,
+              role,
+              tenantId,
+              empresaId: user?.empresaId ?? state.auth.empresaId,
+              loggedInAt: new Date().toISOString(),
+            };
+            set((s) => ({
+              session,
+              auth: {
+                ...s.auth,
+                tenantId,
+                empresaId: session.empresaId ?? s.auth.empresaId,
+                role,
+                modules,
+              },
+            }));
+            get().saveActiveTenantWorkspace();
+            return { ok: true };
+          }
+          if (res.status !== 503 && !data.fallbackLocal) {
+            return { ok: false, error: data.error ?? "E-mail ou senha inválidos." };
+          }
+        } catch {
+          /* API offline — fluxo local abaixo */
+        }
+
         let state = get();
         const platformTenants = usePlatformStore.getState().tenants;
         const tenantByAdmin = platformTenants.find((t) => t.adminEmail.toLowerCase() === trimmed);

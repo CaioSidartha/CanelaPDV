@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { formatCpfCnpj, moneyBrl } from "@/lib/format-document";
 import { defaultCapabilities } from "@/lib/tenant-snapshot";
 import { usePlatformStore } from "@/store/usePlatformStore";
@@ -24,13 +25,18 @@ const MODULE_LABELS: Record<TenantModuleName, string> = {
 };
 
 export default function PlatformTenantDetailPage() {
+  const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const tenant = usePlatformStore((s) => s.tenants.find((t) => t.id === id));
   const billingAll = usePlatformStore((s) => s.billing);
   const billing = useMemo(() => billingAll.filter((b) => b.tenantId === id), [billingAll, id]);
   const updateTenant = usePlatformStore((s) => s.updateTenant);
+  const removeTenant = usePlatformStore((s) => s.removeTenant);
   const addBillingEntry = usePlatformStore((s) => s.addBillingEntry);
   const setBillingStatus = usePlatformStore((s) => s.setBillingStatus);
+  const [newPassword, setNewPassword] = useState("");
+  const [pwdMsg, setPwdMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   if (!tenant) {
     return (
@@ -84,10 +90,83 @@ export default function PlatformTenantDetailPage() {
           {moneyBrl(tenant.monthlyFee)}/mês
         </p>
         <p className="mt-2 text-sm text-stone-500">
-          Login loja: <span className="text-stone-300">{tenant.adminEmail}</span>
-          {tenant.kind === "test" && " (senha padrão teste123 se não alterou na criação)"}
+          Plano <span className="capitalize text-stone-300">{tenant.planId}</span> · login loja:{" "}
+          <span className="text-stone-300">{tenant.adminEmail}</span>
         </p>
       </div>
+
+      <section className="rounded-xl border border-stone-800 bg-[#141210] p-5">
+        <h2 className="text-sm font-semibold text-stone-200">Credenciais da loja</h2>
+        <p className="mt-1 text-xs text-stone-500">Altera a senha no servidor (login em /login).</p>
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <div className="min-w-[200px] flex-1">
+            <label className="mb-1 block text-xs text-stone-500">Nova senha</label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="border-stone-700 bg-stone-900/80"
+              minLength={6}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            disabled={busy || newPassword.length < 6}
+            onClick={() => {
+              void (async () => {
+                setBusy(true);
+                setPwdMsg(null);
+                try {
+                  const res = await fetch(`/api/platform/tenants/${id}`, {
+                    method: "PATCH",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ adminPassword: newPassword }),
+                  });
+                  const data = (await res.json()) as { error?: string };
+                  if (!res.ok) {
+                    setPwdMsg(data.error ?? "Não foi possível atualizar.");
+                  } else {
+                    setPwdMsg("Senha atualizada no servidor.");
+                    setNewPassword("");
+                  }
+                } catch {
+                  setPwdMsg("Falha de rede.");
+                }
+                setBusy(false);
+              })();
+            }}
+          >
+            Salvar senha
+          </Button>
+        </div>
+        {pwdMsg && <p className="mt-2 text-xs text-stone-400">{pwdMsg}</p>}
+        <div className="mt-6 border-t border-stone-800 pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="text-red-300 hover:text-red-200"
+            disabled={busy}
+            onClick={() => {
+              if (!confirm(`Excluir a conta "${tenant.name}"? Isso remove o login no servidor.`)) return;
+              void (async () => {
+                setBusy(true);
+                const res = await removeTenant(id);
+                setBusy(false);
+                if (!res.ok) {
+                  alert(res.error);
+                  return;
+                }
+                router.push("/platform/tenants");
+              })();
+            }}
+          >
+            Excluir conta
+          </Button>
+        </div>
+      </section>
 
       <section className="rounded-xl border border-stone-800 bg-[#141210] p-5">
         <h2 className="text-sm font-semibold text-stone-200">Limites e módulos</h2>

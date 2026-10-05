@@ -66,6 +66,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       profile: {
+        sub: result.profile.sub,
         email: result.profile.email,
         name: result.profile.name,
         scope: result.profile.scope,

@@ -10,11 +10,15 @@ import { modulesFromCapabilities } from "@/lib/tenant-snapshot";
 
 const CATALOG_LAYOUT_VERSION = 2;
 
-export async function buildFreshTenantWorkspace(tenant: PlatformTenant, plainPassword: string) {
+export async function buildFreshTenantWorkspace(
+  tenant: PlatformTenant,
+  plainPassword: string,
+  adminUserId?: string,
+) {
   const empresaId = newEntityId("empresa");
   const passwordHash = await hashPassword(plainPassword);
   const admin: AppUser = {
-    id: newEntityId("user"),
+    id: adminUserId ?? newEntityId("user"),
     tenantId: tenant.id,
     empresaId,
     name: "Administrador",
