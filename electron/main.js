@@ -8,6 +8,18 @@ const path = require("path");
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.PADARIA_DEV_URL || "http://localhost:3000";
+const PROD_URL = (process.env.PADARIA_APP_URL || "https://canelapdv.onrender.com").replace(/\/$/, "");
+
+function compareSemver(a, b) {
+  const pa = String(a).split(".").map((x) => parseInt(x, 10) || 0);
+  const pb = String(b).split(".").map((x) => parseInt(x, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    const da = pa[i] ?? 0;
+    const db = pb[i] ?? 0;
+    if (da !== db) return da - db;
+  }
+  return 0;
+}
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
@@ -42,9 +54,7 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL(DEV_URL);
   } else {
-    // Produção: por enquanto espera next start na porta 3000 embutida depois.
-    // Próximo passo: embutir servidor Node no main ou export estático.
-    mainWindow.loadURL("http://127.0.0.1:3000");
+    mainWindow.loadURL(`${PROD_URL}/login`);
   }
 }
 
@@ -65,6 +75,34 @@ ipcMain.handle("app:getInfo", () => ({
   isPackaged: app.isPackaged,
   platform: process.platform,
 }));
+
+ipcMain.handle("app:checkForUpdates", async () => {
+  const base = isDev ? DEV_URL.replace(/\/$/, "") : PROD_URL;
+  const installedVersion = app.getVersion();
+  try {
+    const res = await fetch(`${base}/api/desktop/release`, { cache: "no-store" });
+    if (!res.ok) {
+      return { error: "Não foi possível consultar o servidor de versões." };
+    }
+    const manifest = await res.json();
+    const latestDesktopVersion = manifest?.desktop?.version ?? installedVersion;
+    const webVersion = manifest?.webVersion ?? installedVersion;
+    const downloadUrl = manifest?.desktop?.windowsDownloadUrl ?? "";
+    const updateAvailable = compareSemver(installedVersion, latestDesktopVersion) < 0;
+    return {
+      installedVersion,
+      latestDesktopVersion,
+      webVersion,
+      updateAvailable,
+      downloadUrl,
+      releaseNotes: manifest?.desktop?.releaseNotes,
+    };
+  } catch (e) {
+    return {
+      error: e instanceof Error ? e.message : "Falha ao buscar atualizações.",
+    };
+  }
+});
 
 /** Balança — simulação no main; trocar pelo conector real depois. */
 ipcMain.handle("hardware:scale:read", async () => {

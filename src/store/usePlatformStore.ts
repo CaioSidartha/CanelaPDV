@@ -40,6 +40,7 @@ type PlatformStore = {
 
   setHasHydrated: (v: boolean) => void;
   setLeadNotifyEmail: (email: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  savePlatformSettings: (patch: Partial<PlatformSettings>) => Promise<{ ok: true } | { ok: false; error: string }>;
   hydrateSettingsFromServer: () => Promise<void>;
   hydrateLeadsFromServer: () => Promise<void>;
   hydrateTenantsFromServer: () => Promise<void>;
@@ -148,8 +149,11 @@ export const usePlatformStore = create<PlatformStore>()(
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
       setLeadNotifyEmail: async (email) => {
-        const leadNotifyEmail = email.trim();
-        const settings: PlatformSettings = { leadNotifyEmail };
+        return get().savePlatformSettings({ leadNotifyEmail: email.trim() });
+      },
+
+      savePlatformSettings: async (patch) => {
+        const settings: PlatformSettings = { ...get().settings, ...patch };
         const synced = await syncLeadSettingsToServer(settings);
         if (!synced.ok) return synced;
         set({ settings });

@@ -30,7 +30,24 @@ export async function POST(req: Request) {
   if (leadNotifyEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadNotifyEmail)) {
     return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
   }
-  const settings: PlatformSettings = { leadNotifyEmail };
+
+  const current = await readLeadSettingsDb();
+  let desktopRelease = current.desktopRelease;
+  if (body.desktopRelease) {
+    const version = body.desktopRelease.version?.trim() ?? "";
+    const windowsDownloadUrl = body.desktopRelease.windowsDownloadUrl?.trim() ?? "";
+    if (!version) {
+      return NextResponse.json({ error: "Informe a versão do app desktop." }, { status: 400 });
+    }
+    desktopRelease = {
+      version,
+      windowsDownloadUrl,
+      releaseNotes: body.desktopRelease.releaseNotes?.trim() || undefined,
+      publishedAt: new Date().toISOString(),
+    };
+  }
+
+  const settings: PlatformSettings = { leadNotifyEmail, desktopRelease };
 
   if (isDatabaseConfigured()) {
     const auth = await requirePlatformSession();

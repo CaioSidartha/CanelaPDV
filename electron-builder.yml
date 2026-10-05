@@ -1,6 +1,6 @@
 {
   "appId": "com.padariamaxima.pdv",
-  "productName": "Sistema PDV Padaria",
+  "productName": "Canela Store",
   "directories": {
     "output": "dist-electron"
   },

@@ -90,10 +90,20 @@ export interface PlatformSession {
   loggedInAt: string;
 }
 
+/** Instalador Windows publicado pelo painel master. */
+export interface DesktopReleaseInfo {
+  version: string;
+  windowsDownloadUrl: string;
+  releaseNotes?: string;
+  publishedAt?: string;
+}
+
 /** Configurações do painel master (leads, notificações). */
 export interface PlatformSettings {
   /** E-mail que recebe cópia das solicitações do site (quando o visitante optar). */
   leadNotifyEmail: string;
+  /** Versão do app desktop e link do instalador (.exe). */
+  desktopRelease?: DesktopReleaseInfo;
 }
 
 export const PLAN_PRESETS: Record<

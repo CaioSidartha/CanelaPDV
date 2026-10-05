@@ -15,6 +15,17 @@ declare global {
         isPackaged: boolean;
         platform: string;
       }>;
+      checkForUpdates: () => Promise<
+        | {
+            installedVersion: string;
+            latestDesktopVersion: string;
+            webVersion: string;
+            updateAvailable: boolean;
+            downloadUrl: string;
+            releaseNotes?: string;
+          }
+        | { error: string }
+      >;
       readScale?: () => Promise<
         | {
             ok: true;

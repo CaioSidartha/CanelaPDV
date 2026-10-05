@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { AppDesktopBar } from "@/components/layout/AppDesktopBar";
 import { TenantPlanBanner } from "@/components/tenant/TenantPlanBanner";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -34,6 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         <main className="min-h-screen flex-1 overflow-auto text-zinc-200 print:overflow-visible print:text-black">
           <TenantPlanBanner />
+          <AppDesktopBar />
           {children}
         </main>
       </div>

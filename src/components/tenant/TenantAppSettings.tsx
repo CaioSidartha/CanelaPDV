@@ -1,12 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Download, HardDrive, Cloud } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { fetchDesktopReleaseManifest, getInstalledDesktopVersion } from "@/lib/desktop-client";
 import { useTenantCapabilities, usePlatformTenant } from "@/hooks/useTenantCapabilities";
 
 export function TenantAppSettings() {
   const cap = useTenantCapabilities();
   const tenant = usePlatformTenant();
+  const [manifest, setManifest] = useState<Awaited<ReturnType<typeof fetchDesktopReleaseManifest>>>(null);
+  const [installed, setInstalled] = useState<string | null>(null);
+
+  useEffect(() => {
+    void fetchDesktopReleaseManifest().then(setManifest);
+    void getInstalledDesktopVersion().then(setInstalled);
+  }, []);
 
   const modeLabel =
     cap.deployMode === "hybrid"
@@ -47,16 +55,33 @@ export function TenantAppSettings() {
         </div>
       </dl>
 
+      {manifest && (
+        <p className="text-xs text-zinc-500">
+          Painel online v{manifest.webVersion}
+          {installed ? ` · App instalado v${installed}` : ""}
+          {manifest.desktop.version ? ` · Último instalador v${manifest.desktop.version}` : ""}
+        </p>
+      )}
+
       {canDownload ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4">
           <p className="text-sm text-amber-100/90">
-            O instalador Windows (balança, impressora e caixa sem depender do navegador) está em desenvolvimento.
-            Enquanto isso, use o Chrome ou Edge neste link — seus dados já ficam salvos neste computador.
+            Use o botão <strong>Baixar para Windows</strong> no canto superior da tela (barra do app).
+            No app instalado, use <strong>Buscar atualizações</strong> quando a Canela publicar uma versão nova.
           </p>
-          <Button type="button" className="mt-4 gap-2" disabled title="Versão desktop em breve">
-            <Download className="h-4 w-4" />
-            Baixar Canela para Windows (em breve)
-          </Button>
+          {manifest?.desktop.windowsDownloadUrl ? (
+            <a
+              href={manifest.desktop.windowsDownloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-light"
+            >
+              <Download className="h-4 w-4" />
+              Baixar v{manifest.desktop.version}
+            </a>
+          ) : (
+            <p className="mt-3 text-xs text-amber-200/70">Aguardando link do instalador no painel master.</p>
+          )}
         </div>
       ) : (
         <p className="text-sm text-zinc-500">
