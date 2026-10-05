@@ -1,5 +1,7 @@
 # App Windows — versões e atualização
 
+**Guia completo para humanos:** [INSTALADOR-WINDOWS-PASSO-A-PASSO.md](./INSTALADOR-WINDOWS-PASSO-A-PASSO.md) (banco de dados, o que o exe traz, publicar versão, testar com cliente).
+
 ## Fluxo
 
 1. **Deploy no Render** atualiza o painel web (`NEXT_PUBLIC_APP_VERSION` = `package.json`).
