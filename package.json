@@ -2,6 +2,9 @@
   "name": "sistema-padaria",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "electron/main.js",
   "scripts": {
     "dev": "node scripts/dev-web.mjs",
@@ -9,6 +12,7 @@
     "dev:turbo": "next dev --turbopack",
     "dev:clean": "node scripts/dev-web.mjs --clean",
     "build": "next build",
+    "build:render": "npm ci --include=dev && npm run build",
     "start": "next start",
     "lint": "next lint",
     "electron:dev": "electron .",

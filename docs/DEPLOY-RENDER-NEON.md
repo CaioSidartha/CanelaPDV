@@ -14,7 +14,8 @@ DATABASE_URL="sua-url" npm run db:seed
 ## 2. Render (Web Service)
 
 - **Repositório:** `https://github.com/CaioSidartha/CanelaPDV.git`
-- **Build:** `npm ci && npm run build`
+- **Build:** `npm ci --include=dev && npm run build`  
+  (obrigatório se `NODE_ENV=production` nas env vars — senão o Render não instala TypeScript/Tailwind e o build quebra)
 - **Start:** `npm start`
 - **Health check path:** `/api/health`
 
