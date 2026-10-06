@@ -6,6 +6,8 @@ import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { PRODUCT_NAME } from "@/config/brand";
 import { NAV_ITEMS } from "@/config/navigation";
+import { useAppSurface } from "@/hooks/useAppSurface";
+import { CLOUD_PORTAL_PATHS } from "@/lib/app-surface";
 import { canAccessModule, isRoleAtLeast } from "@/lib/tenant-access";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
@@ -19,9 +21,16 @@ export function AppSidebar() {
   const session = useAppStore((s) => s.session);
   const logout = useAppStore((s) => s.logout);
 
+  const surface = useAppSurface();
   const ctx = { role: auth.role, modules: auth.modules };
 
   const visible = NAV_ITEMS.filter((item) => {
+    if (surface === "cloud-portal" && !CLOUD_PORTAL_PATHS.has(item.href)) return false;
+    if (surface !== "store-desktop" && item.storeOnly) return false;
+    if (surface === "cloud-management" && item.group === "operacao" && item.storeOnly) return false;
+    if (surface === "cloud-management" && item.group === "operacao" && auth.role === "operador") {
+      return false;
+    }
     if (item.module && !canAccessModule(ctx, item.module)) return false;
     if (item.minRole && !isRoleAtLeast(auth.role, item.minRole)) return false;
     return true;
@@ -92,8 +101,8 @@ export function AppSidebar() {
       </Link>
 
       <nav className="flex flex-1 flex-col overflow-y-auto px-2">
-        {renderGroup(operacao, "Operação")}
-        {renderGroup(admin, "Administração")}
+        {operacao.length > 0 && renderGroup(operacao, surface === "cloud-management" ? "Loja (visão)" : "Operação")}
+        {admin.length > 0 && renderGroup(admin, "Administração")}
       </nav>
 
       <button

@@ -11,6 +11,8 @@
 # testing
 /coverage
 
+dist-electron/
+
 # next.js
 /.next/
 /out/

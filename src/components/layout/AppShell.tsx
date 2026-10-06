@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { AuthGate } from "@/components/auth/AuthGate";
+import { SurfaceRestrictedBanner, SurfaceRouteGuard } from "@/components/auth/SurfaceRouteGuard";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { AppDesktopBar } from "@/components/layout/AppDesktopBar";
 import { TenantPlanBanner } from "@/components/tenant/TenantPlanBanner";
@@ -31,14 +32,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthGate>
-      <div className="flex min-h-screen bg-background print:block print:bg-white">
-        <AppSidebar />
-        <main className="min-h-screen flex-1 overflow-auto text-zinc-200 print:overflow-visible print:text-black">
-          <TenantPlanBanner />
-          <AppDesktopBar />
-          {children}
-        </main>
-      </div>
+      <SurfaceRouteGuard>
+        <div className="flex min-h-screen bg-background print:block print:bg-white">
+          <AppSidebar />
+          <main className="min-h-screen flex-1 overflow-auto text-zinc-200 print:overflow-visible print:text-black">
+            <TenantPlanBanner />
+            <SurfaceRestrictedBanner />
+            <AppDesktopBar />
+            {children}
+          </main>
+        </div>
+      </SurfaceRouteGuard>
     </AuthGate>
   );
 }

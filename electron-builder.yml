@@ -26,8 +26,6 @@
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
-    "shortcutName": "Canela Store",
-    "installerIcon": "public/brand/canela-icon.png",
-    "uninstallerIcon": "public/brand/canela-icon.png"
+    "shortcutName": "Canela Store"
   }
 }

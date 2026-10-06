@@ -1,12 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { CANELA_LOGO_SRC } from "@/config/brand-assets";
+import { useAppSurface } from "@/hooks/useAppSurface";
+import { surfaceLabel } from "@/lib/app-surface";
 import { useAppStore } from "@/store/useAppStore";
 
 /** Área inicial sem módulo selecionado — marca d'água da loja / Canela. */
 export function HomeWatermark() {
   const company = useAppStore((s) => s.company);
+  const surface = useAppSurface();
   const logo = company.logoUrl?.trim() || CANELA_LOGO_SRC;
+
+  const subtitle =
+    surface === "store-desktop"
+      ? "Escolha um módulo no menu — caixa, estoque, comandas e mais."
+      : surface === "cloud-portal"
+        ? "Plano local: baixe o app Windows para operar o balcão. Este painel é só para download e conta."
+        : "Visão gerencial na nuvem — estoque, ponto, equipe e relatórios. PDV e comandas ficam no app da loja.";
 
   return (
     <div className="relative flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center px-6 py-16">
@@ -26,9 +37,16 @@ export function HomeWatermark() {
         <p className="mt-8 font-display text-2xl font-semibold text-[var(--foreground)] opacity-90">
           {company.name}
         </p>
-        <p className="mt-2 max-w-sm text-sm text-[var(--muted-foreground)]">
-          Escolha um módulo no menu ao lado para começar — caixa, estoque, comandas e mais.
-        </p>
+        <p className="mt-1 text-xs font-medium uppercase tracking-wide text-amber-600/90">{surfaceLabel(surface)}</p>
+        <p className="mt-2 max-w-md text-sm text-[var(--muted-foreground)]">{subtitle}</p>
+        {surface === "cloud-portal" && (
+          <Link
+            href="/configuracoes?tab=app"
+            className="mt-6 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-light"
+          >
+            Baixar app para Windows
+          </Link>
+        )}
       </div>
     </div>
   );

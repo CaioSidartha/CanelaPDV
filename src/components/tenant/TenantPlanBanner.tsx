@@ -16,7 +16,7 @@ export function TenantPlanBanner() {
   } else if (cap.deployMode === "online") {
     parts.push("Modo somente online — sem app para baixar no PC.");
   } else {
-    parts.push("Online + offline: dados salvos aqui no navegador; nuvem quando conectado.");
+    parts.push("Híbrido: balcão no app Windows; gestão pode usar este painel na nuvem.");
   }
 
   if (!cap.fiscalEnabled) parts.push("Módulo fiscal desligado no plano.");
