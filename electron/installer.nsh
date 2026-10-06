@@ -1,17 +1,16 @@
-; Escolha Servidor vs Terminal no instalador Windows (NSIS / electron-builder)
+; Servidor vs Terminal — sem parenteses no texto (NSIS quebra o MessageBox)
 !macro customInstall
-  MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Como este computador será usado?$\n$\nSim = Servidor da loja (banco e rede)$\nNão = Terminal (caixa, rampa…)$\nCancelar = definir na primeira abertura do app" IDYES writeServer IDNO writeTerminal IDCANCEL done
-  writeServer:
+  MessageBox MB_YESNO|MB_ICONQUESTION "Este PC sera o SERVIDOR da loja?$\r$\n$\r$\nSim = Servidor$\r$\nNao = Terminal" IDYES roleServer IDNO roleTerminal
+  roleServer:
     StrCpy $9 "server"
-    Goto persistRole
-  writeTerminal:
+    Goto rolePersist
+  roleTerminal:
     StrCpy $9 "terminal"
-    Goto persistRole
-  persistRole:
+    Goto rolePersist
+  rolePersist:
     ReadEnvStr $0 "APPDATA"
     CreateDirectory "$0\Canela"
     FileOpen $1 "$0\Canela\install-role.txt" w
     FileWrite $1 $9
     FileClose $1
-  done:
 !macroend
