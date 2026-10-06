@@ -1,16 +1,25 @@
 /**
  * Processo principal Electron — casca do PDV baixável.
  * Dev: carrega http://localhost:3000 (Next)
- * Prod empacotado: servidor Next standalone local (sem Render)
- * Override: PADARIA_APP_URL aponta para URL remota
+ * Servidor empacotado: Next standalone em 0.0.0.0 (LAN)
+ * Terminal empacotado: carrega URL do servidor salva
  */
 const { app, BrowserWindow, shell, ipcMain } = require("electron");
 const path = require("path");
+const http = require("http");
 const {
   startEmbeddedNextServer,
   stopEmbeddedNextServer,
   standaloneDir,
+  getBoundPort,
 } = require("./embedded-server");
+const {
+  readDeviceConfig,
+  writeDeviceConfig,
+  generatePairingCode,
+} = require("./device-config");
+const { buildNetworkHints } = require("./network-hints");
+const { CANELA_LAN_SERVER_PORT } = require("./lan-constants");
 const fs = require("fs");
 
 const isDev = !app.isPackaged;
@@ -19,7 +28,6 @@ const REMOTE_APP_URL = (process.env.PADARIA_APP_URL || "https://canelapdv.onrend
   /\/$/,
   "",
 );
-/** Manifest de versão / download do .exe — sempre na nuvem. */
 const RELEASE_CHECK_URL = (
   process.env.PADARIA_RELEASE_URL || "https://canelapdv.onrender.com"
 ).replace(/\/$/, "");
@@ -38,19 +46,97 @@ function compareSemver(a, b) {
   return 0;
 }
 
+function normalizeServerUrl(input, port = CANELA_LAN_SERVER_PORT) {
+  const raw = String(input || "").trim();
+  if (!raw) return "";
+  let url = raw;
+  if (!/^https?:\/\//i.test(url)) url = `http://${url}`;
+  try {
+    const u = new URL(url);
+    if (!u.port) u.port = String(port);
+    u.pathname = "";
+    u.search = "";
+    u.hash = "";
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function getInstallRole() {
+  const cfg = readDeviceConfig();
+  return cfg.installRole;
+}
+
 function shouldUseEmbeddedServer() {
   if (process.env.PADARIA_APP_URL) return false;
   if (process.env.PADARIA_FORCE_REMOTE === "1") return false;
-  if (isDev) return process.env.PADARIA_USE_EMBEDDED === "1";
+  const role = getInstallRole();
+  if (role === "terminal") return false;
+  if (isDev) return process.env.PADARIA_USE_EMBEDDED === "1" || role === "server";
   const serverJs = path.join(standaloneDir(), "server.js");
-  return fs.existsSync(serverJs);
+  if (!fs.existsSync(serverJs)) return false;
+  if (role === "server") return true;
+  if (!role) return true;
+  return false;
+}
+
+function testServerHealth(baseUrl) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const url = `${normalizeServerUrl(baseUrl)}/api/health`;
+    if (!url) {
+      resolve({ ok: false, error: "Endereço inválido." });
+      return;
+    }
+    const req = http.get(url, (res) => {
+      res.resume();
+      if (res.statusCode && res.statusCode >= 200 && res.statusCode < 500) {
+        resolve({ ok: true, latencyMs: Date.now() - started });
+      } else {
+        resolve({ ok: false, error: `Resposta ${res.statusCode}` });
+      }
+    });
+    req.on("error", (e) => {
+      resolve({ ok: false, error: e.message || "Falha na conexão." });
+    });
+    req.setTimeout(8000, () => {
+      req.destroy();
+      resolve({ ok: false, error: "Tempo esgotado." });
+    });
+  });
 }
 
 async function resolveAppBaseUrl() {
-  if (isDev) return DEV_URL.replace(/\/$/, "");
+  if (isDev && !process.env.PADARIA_USE_EMBEDDED) {
+    return DEV_URL.replace(/\/$/, "");
+  }
+
+  const cfg = readDeviceConfig();
+  if (cfg.installRole === "terminal") {
+    const url = normalizeServerUrl(cfg.terminalServerUrl);
+    if (url) return url;
+    if (isDev) return DEV_URL.replace(/\/$/, "");
+    return REMOTE_APP_URL;
+  }
+
   if (!shouldUseEmbeddedServer()) return REMOTE_APP_URL;
-  const { baseUrl } = await startEmbeddedNextServer();
+
+  const lanMode = cfg.installRole === "server" || !cfg.installRole || app.isPackaged;
+  const { baseUrl, port } = await startEmbeddedNextServer({
+    lanMode,
+    port: cfg.serverPort || CANELA_LAN_SERVER_PORT,
+    hostname: lanMode ? "0.0.0.0" : "127.0.0.1",
+  });
+  writeDeviceConfig({ serverPort: port });
   return baseUrl;
+}
+
+function buildPublicServerUrl() {
+  const cfg = readDeviceConfig();
+  const port = getBoundPort() || cfg.serverPort || CANELA_LAN_SERVER_PORT;
+  const hints = buildNetworkHints(port);
+  return hints.terminalBaseUrl || `http://127.0.0.1:${port}`;
 }
 
 /** @type {BrowserWindow | null} */
@@ -60,6 +146,12 @@ async function createWindow() {
   if (!appBaseUrl) {
     appBaseUrl = await resolveAppBaseUrl();
   }
+
+  const cfg = readDeviceConfig();
+  const startPath =
+    cfg.installRole === "terminal" && !normalizeServerUrl(cfg.terminalServerUrl)
+      ? "/configuracoes?tab=terminais"
+      : "/login";
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -87,7 +179,7 @@ async function createWindow() {
     return { action: "deny" };
   });
 
-  await mainWindow.loadURL(`${appBaseUrl}/login`);
+  await mainWindow.loadURL(`${appBaseUrl}${startPath}`);
 }
 
 app.whenReady().then(() => {
@@ -114,13 +206,100 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-ipcMain.handle("app:getInfo", () => ({
-  version: app.getVersion(),
-  isPackaged: app.isPackaged,
-  platform: process.platform,
-  embedded: shouldUseEmbeddedServer(),
-  appBaseUrl: appBaseUrl || REMOTE_APP_URL,
-}));
+ipcMain.handle("app:getInfo", () => {
+  const cfg = readDeviceConfig();
+  return {
+    version: app.getVersion(),
+    isPackaged: app.isPackaged,
+    platform: process.platform,
+    embedded: shouldUseEmbeddedServer(),
+    appBaseUrl: appBaseUrl || REMOTE_APP_URL,
+    installRole: cfg.installRole,
+    setupCompleted: cfg.setupCompleted,
+    serverPublicUrl: cfg.installRole === "server" ? buildPublicServerUrl() : "",
+    terminalServerUrl: cfg.terminalServerUrl || "",
+  };
+});
+
+ipcMain.handle("device:getConfig", () => {
+  const cfg = readDeviceConfig();
+  const port = getBoundPort() || cfg.serverPort || CANELA_LAN_SERVER_PORT;
+  const hints = buildNetworkHints(port);
+  return {
+    ...cfg,
+    serverPublicUrl: cfg.installRole === "server" ? hints.terminalBaseUrl : "",
+    networkHints: hints,
+  };
+});
+
+ipcMain.handle("device:setConfig", (_evt, patch) => {
+  const safe = { ...patch };
+  if (safe.terminalServerUrl) {
+    safe.terminalServerUrl = normalizeServerUrl(safe.terminalServerUrl);
+  }
+  if (safe.serverPort) {
+    safe.serverPort = Number(safe.serverPort) || CANELA_LAN_SERVER_PORT;
+  }
+  const next = writeDeviceConfig(safe);
+  return next;
+});
+
+ipcMain.handle("device:getNetworkHints", () => {
+  const cfg = readDeviceConfig();
+  const port = getBoundPort() || cfg.serverPort || CANELA_LAN_SERVER_PORT;
+  return buildNetworkHints(port);
+});
+
+ipcMain.handle("device:testServerUrl", async (_evt, url) => testServerHealth(url));
+
+ipcMain.handle("device:generatePairingCode", () => {
+  const code = generatePairingCode();
+  const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  writeDeviceConfig({ pairingCode: code, pairingExpiresAt: expires });
+  return { code, expiresAt: expires };
+});
+
+ipcMain.handle("device:registerTerminal", (_evt, payload) => {
+  const cfg = readDeviceConfig();
+  const code = String(payload?.pairingCode || "").trim();
+  const label = String(payload?.label || "Terminal").trim() || "Terminal";
+  if (!cfg.pairingCode || cfg.pairingCode !== code) {
+    return { ok: false, error: "Código de pareamento inválido." };
+  }
+  if (cfg.pairingExpiresAt && new Date(cfg.pairingExpiresAt).getTime() < Date.now()) {
+    return { ok: false, error: "Código expirado. Gere outro no servidor." };
+  }
+  const entry = {
+    id: `term-${Date.now()}`,
+    label,
+    deviceId: String(payload?.deviceId || ""),
+    pairedAt: new Date().toISOString(),
+  };
+  const paired = [...(cfg.pairedTerminals || []), entry];
+  writeDeviceConfig({
+    pairedTerminals: paired,
+    pairingCode: "",
+    pairingExpiresAt: null,
+    terminalDeviceId: entry.id,
+    terminalLabel: label,
+  });
+  return { ok: true, terminal: entry };
+});
+
+ipcMain.handle("device:reloadApp", async () => {
+  appBaseUrl = null;
+  stopEmbeddedNextServer();
+  appBaseUrl = await resolveAppBaseUrl();
+  if (mainWindow) {
+    const cfg = readDeviceConfig();
+    const startPath =
+      cfg.installRole === "terminal" && !normalizeServerUrl(cfg.terminalServerUrl)
+        ? "/configuracoes?tab=terminais"
+        : "/login";
+    await mainWindow.loadURL(`${appBaseUrl}${startPath}`);
+  }
+  return { ok: true, appBaseUrl };
+});
 
 ipcMain.handle("app:checkForUpdates", async () => {
   const installedVersion = app.getVersion();
@@ -149,7 +328,6 @@ ipcMain.handle("app:checkForUpdates", async () => {
   }
 });
 
-/** Balança — simulação no main; trocar pelo conector real depois. */
 ipcMain.handle("hardware:scale:read", async () => {
   await new Promise((r) => setTimeout(r, 300));
   const grams = Math.round(80 + Math.random() * 820);
@@ -163,7 +341,6 @@ ipcMain.handle("hardware:scale:read", async () => {
   };
 });
 
-/** Maquininha — simulação no main; trocar pelo SDK da adquirente depois. */
 ipcMain.handle("hardware:payment:start", async (_evt, payload) => {
   const amount = Number(payload?.amount) || 0;
   const type = payload?.type || "debito";
@@ -192,7 +369,6 @@ ipcMain.handle("hardware:payment:start", async (_evt, payload) => {
   };
 });
 
-/** Cupom — impressão silenciosa se houver impressora no Windows. */
 ipcMain.handle("hardware:print:html", async (_evt, html) => {
   const source = typeof html === "string" ? html : "";
   if (!source.trim()) return { printed: false, reason: "Cupom vazio." };

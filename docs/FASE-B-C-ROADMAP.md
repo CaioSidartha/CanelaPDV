@@ -1,5 +1,12 @@
 # Fases B e C — sync e PDV offline
 
+## Rede local — Servidor vs Terminal
+
+- Instalador NSIS pergunta: **Servidor** ou **Terminal** (grava `%APPDATA%\Canela\install-role.txt`).
+- **Servidor:** Next embutido em `0.0.0.0:3847`; Configurações → **Terminais** mostra endereço mascarado (olho + copiar).
+- **Terminal:** conecta ao servidor, teste via `/api/health`, pareamento opcional por código.
+- Operador / terminal: abas Configurações = Terminais, Hardwares, Preços no peso.
+
 ## Fase C (app Windows) — em andamento
 
 **Objetivo:** o `.exe` abre o PDV **sem depender do Render** no dia a dia.

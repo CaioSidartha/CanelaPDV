@@ -6,9 +6,12 @@ const http = require("http");
 const net = require("net");
 const path = require("path");
 const { app } = require("electron");
+const { CANELA_LAN_SERVER_PORT } = require("./lan-constants");
 
 /** @type {import('child_process').ChildProcess | null} */
 let serverChild = null;
+/** @type {number | null} */
+let boundPort = null;
 
 function standaloneDir() {
   if (app.isPackaged) {
@@ -17,7 +20,10 @@ function standaloneDir() {
   return path.join(__dirname, "..", ".next", "standalone");
 }
 
-function pickPort() {
+function pickPort(preferred) {
+  if (preferred) {
+    return Promise.resolve(preferred);
+  }
   return new Promise((resolve, reject) => {
     const srv = net.createServer();
     srv.listen(0, "127.0.0.1", () => {
@@ -53,9 +59,10 @@ function waitForHealth(baseUrl, attempts = 90) {
 }
 
 /**
- * @returns {Promise<{ baseUrl: string }>}
+ * @param {{ hostname?: string; port?: number; lanMode?: boolean }} opts
+ * @returns {Promise<{ baseUrl: string; port: number; hostname: string }>}
  */
-async function startEmbeddedNextServer() {
+async function startEmbeddedNextServer(opts = {}) {
   const dir = standaloneDir();
   const serverPath = path.join(dir, "server.js");
   const fs = require("fs");
@@ -63,8 +70,11 @@ async function startEmbeddedNextServer() {
     throw new Error(`Bundle local ausente (${serverPath}). Gere o instalador com npm run release:win.`);
   }
 
-  const port = await pickPort();
-  const baseUrl = `http://127.0.0.1:${port}`;
+  const lanMode = Boolean(opts.lanMode);
+  const hostname = opts.hostname || (lanMode ? "0.0.0.0" : "127.0.0.1");
+  const port = await pickPort(opts.port || (lanMode ? CANELA_LAN_SERVER_PORT : undefined));
+  const healthHost = hostname === "0.0.0.0" ? "127.0.0.1" : hostname;
+  const baseUrl = `http://${healthHost}:${port}`;
 
   serverChild = spawn(process.execPath, [serverPath], {
     cwd: dir,
@@ -72,12 +82,14 @@ async function startEmbeddedNextServer() {
       ...process.env,
       ELECTRON_RUN_AS_NODE: "1",
       NODE_ENV: "production",
-      HOSTNAME: "127.0.0.1",
+      HOSTNAME: hostname,
       PORT: String(port),
       CANELA_EMBEDDED: "1",
     },
     stdio: "pipe",
   });
+
+  boundPort = port;
 
   serverChild.on("error", (err) => {
     console.error("[embedded-server]", err);
@@ -86,7 +98,7 @@ async function startEmbeddedNextServer() {
   serverChild.stderr?.on("data", (d) => process.stderr.write(d));
 
   await waitForHealth(baseUrl);
-  return { baseUrl };
+  return { baseUrl, port, hostname };
 }
 
 function stopEmbeddedNextServer() {
@@ -97,10 +109,16 @@ function stopEmbeddedNextServer() {
     /* ignore */
   }
   serverChild = null;
+  boundPort = null;
+}
+
+function getBoundPort() {
+  return boundPort;
 }
 
 module.exports = {
   startEmbeddedNextServer,
   stopEmbeddedNextServer,
   standaloneDir,
+  getBoundPort,
 };

@@ -10,17 +10,42 @@ import { Input } from "@/components/ui/Input";
 import { effectiveUnitPrice } from "@/lib/product-catalog";
 import { newEntityId } from "@/lib/id";
 import { formatBRL } from "@/lib/utils";
+import { TerminalsSettingsPanel } from "@/components/config/TerminalsSettingsPanel";
 import { TenantAppSettings } from "@/components/tenant/TenantAppSettings";
+import {
+  parseSettingsTabQuery,
+  SETTINGS_TAB_LABELS,
+  visibleSettingsTabs,
+  type SettingsTabId,
+} from "@/lib/config-settings-tabs";
+import { isDesktopApp } from "@/lib/desktop-client";
 import { useAppStore } from "@/store/useAppStore";
 import type { Product, WeightPriceConfig } from "@/types";
 
 export default function ConfiguracoesPage() {
-  const [tab, setTab] = useState<"empresa" | "peso" | "produtos" | "hardwares" | "app">("empresa");
+  const authRole = useAppStore((s) => s.auth.role);
+  const [installRole, setInstallRole] = useState<"server" | "terminal" | null>(null);
+  const [tab, setTab] = useState<SettingsTabId>("empresa");
+
+  const allowedTabs = visibleSettingsTabs({
+    isDesktop: isDesktopApp(),
+    installRole,
+    userRole: authRole,
+  });
 
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("tab");
-    if (q === "app") setTab("app");
+    if (!isDesktopApp() || !window.padariaDesktop?.getDeviceConfig) return;
+    window.padariaDesktop.getDeviceConfig().then((cfg) => {
+      const role = (cfg as { installRole?: string })?.installRole;
+      if (role === "server" || role === "terminal") setInstallRole(role);
+    });
   }, []);
+
+  useEffect(() => {
+    const q = parseSettingsTabQuery(new URLSearchParams(window.location.search).get("tab"));
+    if (q && allowedTabs.includes(q)) setTab(q);
+    else if (!allowedTabs.includes(tab) && allowedTabs[0]) setTab(allowedTabs[0]);
+  }, [allowedTabs, tab]);
   const [editor, setEditor] = useState<{ mode: "create" | "edit"; product: Product | null }>({
     mode: "create",
     product: null,
@@ -103,15 +128,7 @@ export default function ConfiguracoesPage() {
       </header>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        {(
-          [
-            ["empresa", "Empresa"],
-            ["peso", "Preços no peso"],
-            ["produtos", "Produtos"],
-            ["hardwares", "Hardwares"],
-            ["app", "App e offline"],
-          ] as const
-        ).map(([k, label]) => (
+        {allowedTabs.map((k) => (
           <button
             key={k}
             type="button"
@@ -122,7 +139,7 @@ export default function ConfiguracoesPage() {
                 : "border border-white/10 bg-zinc-900/40 text-zinc-400 shadow-card hover:bg-zinc-800/50"
             }`}
           >
-            {label}
+            {SETTINGS_TAB_LABELS[k]}
           </button>
         ))}
       </div>
@@ -250,6 +267,8 @@ export default function ConfiguracoesPage() {
           ))}
         </section>
       )}
+
+      {tab === "terminais" && <TerminalsSettingsPanel />}
 
       {tab === "hardwares" && <HardwareSettingsPanel />}
 

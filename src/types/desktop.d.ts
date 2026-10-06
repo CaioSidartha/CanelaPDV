@@ -6,6 +6,8 @@ type DesktopPaymentMethod =
   | "cartao_credito"
   | "cartao_debito";
 
+type DeviceInstallRole = "server" | "terminal";
+
 declare global {
   interface Window {
     padariaDesktop?: {
@@ -14,6 +16,12 @@ declare global {
         version: string;
         isPackaged: boolean;
         platform: string;
+        embedded?: boolean;
+        appBaseUrl?: string;
+        installRole?: DeviceInstallRole | null;
+        setupCompleted?: boolean;
+        serverPublicUrl?: string;
+        terminalServerUrl?: string;
       }>;
       checkForUpdates: () => Promise<
         | {
@@ -26,6 +34,17 @@ declare global {
           }
         | { error: string }
       >;
+      getDeviceConfig?: () => Promise<Record<string, unknown>>;
+      setDeviceConfig?: (patch: Record<string, unknown>) => Promise<Record<string, unknown>>;
+      getNetworkHints?: () => Promise<Record<string, unknown>>;
+      testServerUrl?: (url: string) => Promise<{ ok: true; latencyMs: number } | { ok: false; error: string }>;
+      generatePairingCode?: () => Promise<{ code: string; expiresAt: string }>;
+      registerTerminal?: (payload: {
+        pairingCode: string;
+        label?: string;
+        deviceId?: string;
+      }) => Promise<{ ok: true; terminal: { id: string; label: string } } | { ok: false; error: string }>;
+      reloadDesktopApp?: () => Promise<{ ok: boolean; appBaseUrl?: string }>;
       readScale?: () => Promise<
         | {
             ok: true;
