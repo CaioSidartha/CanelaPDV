@@ -18,7 +18,7 @@ export function buildSessionCsv(
   movements: CashMovement[],
 ): string {
   const lines: string[][] = [];
-  lines.push(["Relatório de turno — Canela Store"]);
+  lines.push(["Relatório de turno — Canela"]);
   lines.push(["Turno ID", session.id]);
   lines.push([
     "Abertura",

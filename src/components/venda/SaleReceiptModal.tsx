@@ -4,6 +4,7 @@ import { Printer, X } from "lucide-react";
 import { paymentMethodLabel } from "@/components/payment/PaymentMethodDisplay";
 import { Button } from "@/components/ui/Button";
 import { printSaleReceiptDialog, type PrintAttempt } from "@/lib/receipt-print";
+import { DEMO_STORE_NAME } from "@/config/brand";
 import { formatBRL } from "@/lib/utils";
 import type { CompanySettings, CompletedSale } from "@/types";
 
@@ -42,7 +43,7 @@ export function SaleReceiptModal({ company, sale, printStatus, onClose }: Props)
 
         <div className="overflow-y-auto bg-white px-5 py-5 font-mono text-[12px] text-zinc-900">
           <div className="text-center">
-            <p className="text-base font-bold">{company.name || "Canela Store"}</p>
+            <p className="text-base font-bold">{company.name || DEMO_STORE_NAME}</p>
             {company.address ? <p className="text-[11px] text-zinc-500">{company.address}</p> : null}
             <p className="text-[11px] text-zinc-500">
               CNPJ {company.cnpj || "—"}

@@ -1,7 +1,7 @@
 {
   "name": "sistema-padaria",
   "version": "0.2.0",
-  "description": "Canela Store PDV e estoque para padarias",
+  "description": "Canela — PDV e estoque para padarias",
   "author": "Canela",
   "private": true,
   "engines": {

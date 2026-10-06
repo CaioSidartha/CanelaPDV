@@ -32,7 +32,7 @@ function createWindow() {
     minHeight: 700,
     show: false,
     backgroundColor: "#2A2118",
-    title: "Canela Store",
+    title: "Canela",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

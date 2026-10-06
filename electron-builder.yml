@@ -1,6 +1,6 @@
 {
   "appId": "com.canela.store",
-  "productName": "Canela Store",
+  "productName": "Canela",
   "copyright": "Copyright © Canela",
   "directories": {
     "output": "dist-electron"
@@ -26,6 +26,6 @@
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
-    "shortcutName": "Canela Store"
+    "shortcutName": "Canela"
   }
 }

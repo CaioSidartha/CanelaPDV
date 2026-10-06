@@ -58,6 +58,7 @@ export async function buildFreshTenantWorkspace(
     cashMovements: [],
     displayTvs: [],
     employees: [],
+    jobPositions: [],
     schedules: [],
     timeOff: [],
     punches: [],

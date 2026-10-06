@@ -601,6 +601,17 @@ export interface TimeSchedule {
   active: boolean;
 }
 
+/** Cargo da loja — vincula um horário (carga) usado no ponto e na abertura do caixa. */
+export interface JobPosition {
+  id: string;
+  name: string;
+  scheduleId: string;
+  active: boolean;
+  createdAt: string;
+  tenantId?: TenantId;
+  empresaId?: EmpresaId;
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -608,10 +619,14 @@ export interface Employee {
   cpf?: string;
   /** Matrícula interna (ex.: "001") */
   registry?: string;
-  /** Cargo / função */
+  /** Cargo cadastrado (herda o horário do cargo). */
+  jobPositionId?: string;
+  /** Legado / texto livre se não houver cargo cadastrado */
   role?: string;
-  /** ID da carga horária */
+  /** Carga horária direta (legado); prefira `jobPositionId`. */
   scheduleId?: string;
+  /** Foto do colaborador (data URL ou URL). */
+  photoUrl?: string;
   /** Código curto para bater ponto (pode ser a matrícula) */
   clockCode: string;
   active: boolean;

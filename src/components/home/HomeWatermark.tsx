@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { CANELA_LOGO_SRC } from "@/config/brand-assets";
+import { CANELA_WORDMARK_SRC } from "@/config/brand-assets";
 import { useAppSurface } from "@/hooks/useAppSurface";
 import { surfaceLabel } from "@/lib/app-surface";
 import { useAppStore } from "@/store/useAppStore";
 
-/** Área inicial sem módulo selecionado — marca d'água da loja / Canela. */
+/** Área inicial — fundo claro só aqui para o wordmark marrom; resto do app mantém o tema escuro. */
 export function HomeWatermark() {
   const company = useAppStore((s) => s.company);
   const surface = useAppSurface();
-  const logo = company.logoUrl?.trim() || CANELA_LOGO_SRC;
+  const wordmark = CANELA_WORDMARK_SRC;
 
   const subtitle =
     surface === "store-desktop"
@@ -20,25 +20,28 @@ export function HomeWatermark() {
         : "Visão gerencial na nuvem — estoque, ponto, equipe e relatórios. PDV e comandas ficam no app da loja.";
 
   return (
-    <div className="relative flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center px-6 py-16">
+    <div
+      className="relative flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center px-6 py-16"
+      style={{ background: "linear-gradient(180deg, #F8F1E8 0%, #EDE4D6 45%, #E5D9C8 100%)" }}
+    >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        className="pointer-events-none absolute inset-0 opacity-40"
         style={{
           background:
-            "radial-gradient(ellipse 55% 45% at 50% 40%, rgba(217,119,6,0.9), transparent 70%)",
+            "radial-gradient(ellipse 60% 50% at 50% 35%, rgba(217,119,6,0.15), transparent 70%)",
         }}
       />
       <div className="relative flex max-w-lg flex-col items-center text-center">
-        <div className="relative w-full max-w-[min(420px,85vw)] opacity-[0.22] grayscale-[20%]">
+        <div className="relative w-full max-w-[min(380px,88vw)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo} alt="" className="mx-auto h-auto w-full object-contain" />
+          <img src={wordmark} alt="Canela" className="mx-auto h-auto w-full object-contain" />
         </div>
-        <p className="mt-8 font-display text-2xl font-semibold text-[var(--foreground)] opacity-90">
-          {company.name}
+        <p className="mt-8 font-display text-2xl font-semibold text-[#3d2817]">{company.name}</p>
+        <p className="mt-1 text-xs font-medium uppercase tracking-wide text-amber-800/90">
+          {surfaceLabel(surface)}
         </p>
-        <p className="mt-1 text-xs font-medium uppercase tracking-wide text-amber-600/90">{surfaceLabel(surface)}</p>
-        <p className="mt-2 max-w-md text-sm text-[var(--muted-foreground)]">{subtitle}</p>
+        <p className="mt-2 max-w-md text-sm text-[#5c4a3a]">{subtitle}</p>
         {surface === "cloud-portal" && (
           <Link
             href="/configuracoes?tab=app"

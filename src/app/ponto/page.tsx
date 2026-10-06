@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -10,17 +10,19 @@ import {
   Pencil,
   Settings2,
   Trash2,
-  Users,
+  Briefcase,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { EmployeeAdminPanel } from "@/components/employees/EmployeeAdminPanel";
+import { JobPositionAdminPanel } from "@/components/ponto/JobPositionAdminPanel";
+import { employeeRoleLabel, employeeScheduleId } from "@/lib/employee-schedule";
+import { isRoleAtLeast } from "@/lib/tenant-access";
 import { PontoCalendarPanel } from "@/components/ponto/PontoCalendarPanel";
 import { useAppStore } from "@/store/useAppStore";
 import type { PunchKind, TimePunch, TimeSchedule, Weekday, WorkShift } from "@/types";
 
-type Tab = "relogio" | "funcionarios" | "horarios" | "calendario" | "folgas" | "cartao";
+type Tab = "relogio" | "cargo" | "horarios" | "calendario" | "folgas" | "cartao";
 
 type SchDayRow = {
   enabled: boolean;
@@ -193,7 +195,9 @@ function plannedStartMinute(schedule: TimeSchedule | undefined, ymd: string): nu
 
 export default function PontoPage() {
   const company = useAppStore((s) => s.company);
+  const auth = useAppStore((s) => s.auth);
   const employees = useAppStore((s) => s.employees);
+  const jobPositions = useAppStore((s) => s.jobPositions);
   const schedules = useAppStore((s) => s.schedules);
   const timeOff = useAppStore((s) => s.timeOff);
   const punches = useAppStore((s) => s.punches);
@@ -206,6 +210,11 @@ export default function PontoPage() {
   const removeTimeOff = useAppStore((s) => s.removeTimeOff);
 
   const [tab, setTab] = useState<Tab>("relogio");
+  const pontoAdmin = isRoleAtLeast(auth.role, "gerente");
+
+  useEffect(() => {
+    if (!pontoAdmin && tab !== "relogio") setTab("relogio");
+  }, [pontoAdmin, tab]);
 
   const scheduleById = useMemo(
     () => new Map(schedules.map((s) => [s.id, s])),
@@ -280,10 +289,11 @@ export default function PontoPage() {
   };
 
   const deleteSchedule = (id: string, name: string) => {
-    const linked = employees.filter((e) => e.scheduleId === id);
-    if (linked.length) {
+    const linkedEmp = employees.filter((e) => employeeScheduleId(e, jobPositions) === id);
+    const linkedPos = jobPositions.filter((p) => p.scheduleId === id);
+    if (linkedEmp.length || linkedPos.length) {
       setSchFormErr(
-        `Não é possível excluir "${name}": ${linked.length} funcionário(s) vinculado(s). Altere a carga deles antes.`,
+        `Não é possível excluir "${name}": vinculado a ${linkedPos.length} cargo(s) e ${linkedEmp.length} funcionário(s).`,
       );
       return;
     }
@@ -305,14 +315,15 @@ export default function PontoPage() {
   const [cardNetting, setCardNetting] = useState(true);
   const [cardOnlyDiff, setCardOnlyDiff] = useState(false);
 
-  const tabs = [
+  const allTabs = [
     { id: "relogio" as const, label: "Relógio", icon: Clock },
-    { id: "funcionarios" as const, label: "Funcionários", icon: Users },
+    { id: "cargo" as const, label: "Cargo", icon: Briefcase },
     { id: "horarios" as const, label: "Horários", icon: Settings2 },
     { id: "calendario" as const, label: "Calendário", icon: CalendarDays },
     { id: "folgas" as const, label: "Folgas", icon: CalendarDays },
     { id: "cartao" as const, label: "Cartão ponto", icon: FileText },
   ];
+  const tabs = pontoAdmin ? allTabs : allTabs.filter((t) => t.id === "relogio");
 
   const employeesActive = useMemo(
     () => employees.filter((e) => e.active).sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
@@ -338,7 +349,8 @@ export default function PontoPage() {
 
   const cardRows = useMemo(() => {
     if (!selectedCardEmp) return [];
-    const sch = selectedCardEmp.scheduleId ? scheduleById.get(selectedCardEmp.scheduleId) : undefined;
+    const schId = employeeScheduleId(selectedCardEmp, jobPositions);
+    const sch = schId ? scheduleById.get(schId) : undefined;
     const out = monthDays.map((ymd) => {
       const dayP = punchesForDay(punches, selectedCardEmp.id, ymd);
       const mins = dayWorkedMinutes(dayP);
@@ -389,7 +401,7 @@ export default function PontoPage() {
       const la = cardNetting ? r.lateAdj : r.lateMin;
       return (ex ?? 0) > 0 || (fa ?? 0) > 0 || (la ?? 0) > 0 || !!r.off;
     });
-  }, [monthDays, punches, selectedCardEmp, scheduleById, timeOff, cardNetting, cardOnlyDiff]);
+  }, [monthDays, punches, selectedCardEmp, scheduleById, timeOff, cardNetting, cardOnlyDiff, jobPositions]);
 
   const cardTotals = useMemo(() => {
     const total = cardRows.reduce((a, r) => a + r.mins, 0);
@@ -416,7 +428,7 @@ export default function PontoPage() {
       <header className="mb-6 print:hidden">
         <h1 className="font-display text-3xl font-semibold text-zinc-100">Ponto</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Funcionários, cargas horárias, folgas e cartão ponto (protótipo para demonstração).
+          Batida de ponto, cargos, horários e cartão (gestão visível para gerência).
         </p>
       </header>
 
@@ -524,7 +536,7 @@ export default function PontoPage() {
         </section>
       )}
 
-      {tab === "funcionarios" && <EmployeeAdminPanel />}
+      {tab === "cargo" && pontoAdmin && <JobPositionAdminPanel />}
 
       {tab === "horarios" && (
         <section className="space-y-6">
@@ -974,14 +986,19 @@ export default function PontoPage() {
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 print:text-black">
                             Função
                           </p>
-                          <p className="text-sm text-zinc-100 print:text-black">{selectedCardEmp.role ?? "—"}</p>
+                          <p className="text-sm text-zinc-100 print:text-black">
+                            {employeeRoleLabel(selectedCardEmp, jobPositions)}
+                          </p>
                         </div>
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 print:text-black">
                             Carga
                           </p>
                           <p className="text-sm text-zinc-100 print:text-black">
-                            {selectedCardEmp.scheduleId ? scheduleById.get(selectedCardEmp.scheduleId)?.name ?? "—" : "—"}
+                            {(() => {
+                              const sid = employeeScheduleId(selectedCardEmp, jobPositions);
+                              return sid ? scheduleById.get(sid)?.name ?? "—" : "—";
+                            })()}
                           </p>
                         </div>
                       </div>
@@ -994,7 +1011,8 @@ export default function PontoPage() {
                       </p>
                       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                         {weekdays.map((d) => {
-                          const sch = selectedCardEmp.scheduleId ? scheduleById.get(selectedCardEmp.scheduleId) : undefined;
+                          const schId = employeeScheduleId(selectedCardEmp, jobPositions);
+    const sch = schId ? scheduleById.get(schId) : undefined;
                           const shifts = sch?.days[d.id] ?? [];
                           const label = shifts.length ? shifts.map((s) => `${s.start}–${s.end}`).join(" · ") : "Folga";
                           return (

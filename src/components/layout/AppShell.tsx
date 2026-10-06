@@ -33,9 +33,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthGate>
       <SurfaceRouteGuard>
-        <div className="flex min-h-screen bg-background print:block print:bg-white">
+        <div className="flex h-screen overflow-hidden bg-background print:block print:h-auto print:overflow-visible print:bg-white">
           <AppSidebar />
-          <main className="min-h-screen flex-1 overflow-auto text-zinc-200 print:overflow-visible print:text-black">
+          <main className="min-h-0 flex-1 overflow-y-auto text-zinc-200 print:overflow-visible print:text-black">
             <TenantPlanBanner />
             <SurfaceRestrictedBanner />
             <AppDesktopBar />

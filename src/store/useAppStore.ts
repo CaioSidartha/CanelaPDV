@@ -57,6 +57,7 @@ import type {
   CompletedSale,
   DisplayTV,
   Employee,
+  JobPosition,
   GoodsReceipt,
   HardwareSettings,
   OrderChannel,
@@ -101,7 +102,7 @@ type AuthState = {
 
 type FinalizeOptions = {
   channel?: OrderChannel;
-  mesaId?: number;
+    mesaId?: number;
   customerNote?: string;
   customerName?: string;
   linesOverride?: CartLine[];
@@ -133,6 +134,7 @@ type AppStore = {
   cashMovements: CashMovement[];
   displayTvs: DisplayTV[];
   employees: Employee[];
+  jobPositions: JobPosition[];
   schedules: TimeSchedule[];
   timeOff: TimeOffEntry[];
   punches: TimePunch[];
@@ -222,7 +224,7 @@ type AppStore = {
       ie?: string;
       phone?: string;
       email?: string;
-      note?: string;
+    note?: string;
       logradouro?: string;
       numero?: string;
       complemento?: string;
@@ -262,6 +264,10 @@ type AppStore = {
   updateEmployee: (id: string, patch: Partial<Omit<Employee, "id" | "createdAt">>) => void;
   removeEmployee: (id: string) => ActionResult;
   toggleEmployeeActive: (id: string) => void;
+  addJobPosition: (position: Omit<JobPosition, "id" | "createdAt">) => void;
+  updateJobPosition: (id: string, patch: Partial<Omit<JobPosition, "id" | "createdAt">>) => void;
+  removeJobPosition: (id: string) => ActionResult;
+  toggleJobPositionActive: (id: string) => void;
   addSchedule: (schedule: Omit<TimeSchedule, "id">) => void;
   updateSchedule: (id: string, patch: Partial<Omit<TimeSchedule, "id">>) => void;
   removeSchedule: (id: string) => void;
@@ -288,7 +294,7 @@ const demoUsers: AppUser[] = [
     name: "Administrador",
     email: "admin@loja.local",
     passwordHash: "3bc77af026eb86b1eb69e7020718a804bd7e936adba6f96a945fadcd7b9c44a4",
-    role: "admin",
+        role: "admin",
     active: true,
     createdAt: "2025-01-01T00:00:00.000Z",
   },
@@ -441,13 +447,13 @@ function applyStockSale(
       : { ...product, stockQty: Math.max(0, previous - qty) };
     ledger.push({
       id: newEntityId("stock"),
-      createdAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
       tenantId: state.auth.tenantId,
       empresaId: state.auth.empresaId,
       productId: product.id,
       productName: product.name,
       delta: -qty,
-      balanceAfter: updated.stockQty ?? 0,
+            balanceAfter: updated.stockQty ?? 0,
       reason: channel === "mesa" ? "venda_mesa" : "venda_balcao",
       saleId,
       mesaId,
@@ -511,7 +517,7 @@ function completedSale(
 }
 
 function workspaceBlobFromState(state: AppStore): Record<string, unknown> {
-  return {
+          return {
     auth: state.auth,
     session: state.session,
     users: state.users,
@@ -529,6 +535,7 @@ function workspaceBlobFromState(state: AppStore): Record<string, unknown> {
     cashMovements: state.cashMovements,
     displayTvs: state.displayTvs,
     employees: state.employees,
+    jobPositions: state.jobPositions,
     schedules: state.schedules,
     timeOff: state.timeOff,
     punches: state.punches,
@@ -583,6 +590,7 @@ const initialState = {
   cashMovements: [],
   displayTvs: [],
   employees: [],
+  jobPositions: [],
   schedules: [],
   timeOff: [],
   punches: [],
@@ -684,7 +692,7 @@ export const useAppStore = create<AppStore>()(
                     capabilities: defaultCapabilities(),
                     branding: {},
                     adminEmail: boot.email,
-                    createdAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
                   };
                 const workspace = await buildFreshTenantWorkspace(tenant, password, profile.sub);
                 const admin = workspace.users[0];
@@ -717,7 +725,7 @@ export const useAppStore = create<AppStore>()(
               empresaId: user?.empresaId ?? state.auth.empresaId,
               loggedInAt: new Date().toISOString(),
             };
-            set((s) => ({
+        set((s) => ({
               session,
               auth: {
                 ...s.auth,
@@ -852,10 +860,10 @@ export const useAppStore = create<AppStore>()(
         const unitPrice = effectiveUnitPrice(product);
         const next = mergeLines(state.cart, [{
           id: newEntityId("line"),
-          productId,
-          name: product.name,
+            productId,
+            name: product.name,
           unitPrice,
-          quantity: qty,
+            quantity: qty,
           subtotal: roundMoney(unitPrice * qty),
         }]);
         const error = validateLinesStock(state.products, next);
@@ -888,7 +896,7 @@ export const useAppStore = create<AppStore>()(
         const error = validateLinesStock(state.products, next);
         if (error) return { ok: false, error };
         set({ cart: next });
-        return { ok: true };
+          return { ok: true };
       },
       decLine: (lineId) => set((state) => ({
         cart: state.cart.flatMap((line) => {
@@ -945,7 +953,7 @@ export const useAppStore = create<AppStore>()(
         if (error) return { ok: false, error };
         const updated: ComandaState = {
           ...comanda,
-          lines: merged,
+              lines: merged,
           customerName: opts?.customerName?.trim() || comanda.customerName,
           customerNote: opts?.customerNote?.trim() || comanda.customerNote,
         };
@@ -998,16 +1006,16 @@ export const useAppStore = create<AppStore>()(
       decComandaLine: (comandaId, lineId) => set((state) => ({
         comandas: state.comandas.map((c) => {
           if (c.id !== comandaId || c.status !== "aberta" || c.split) return c;
-          return {
-            ...c,
+              return {
+                ...c,
             lines: c.lines.flatMap((line) => {
               if (line.id !== lineId) return [line];
               if (line.quantity <= 1 || line.grams || line.weightConfigId) return [];
               const quantity = line.quantity - 1;
               return [{ ...line, quantity, subtotal: roundMoney(line.unitPrice * quantity) }];
+                }),
+              };
             }),
-          };
-        }),
       })),
       setComandaCustomerName: (comandaId, name) => set((state) => ({
         comandas: state.comandas.map((c) => c.id === comandaId ? { ...c, customerName: name.trim() || undefined } : c),
@@ -1039,7 +1047,7 @@ export const useAppStore = create<AppStore>()(
             createdAt: new Date().toISOString(),
           },
         } : c) });
-        return { ok: true };
+          return { ok: true };
       },
       cancelComandaSplit: (comandaId) => {
         const state = get();
@@ -1063,15 +1071,15 @@ export const useAppStore = create<AppStore>()(
           : { ...line };
         const parts = split.parts.map((part) => {
           if (part.index === fromPartIndex) {
-            return {
+              return {
               ...part,
               lines: part.lines.flatMap((item) => {
                 if (item.id !== lineId) return [item];
                 if (moving.quantity >= item.quantity) return [];
                 const quantity = item.quantity - moving.quantity;
                 return [{ ...item, quantity, subtotal: roundMoney(item.unitPrice * quantity) }];
-              }),
-            };
+                }),
+              };
           }
           if (part.index === toPartIndex) return { ...part, lines: addLineToPart(part.lines, moving) };
           return part;
@@ -1079,7 +1087,7 @@ export const useAppStore = create<AppStore>()(
         const mismatch = assertSplitMatchesBaseline(split.baselineLines, parts);
         if (mismatch) return { ok: false, error: mismatch };
         set({ comandas: state.comandas.map((c) => c.id === comandaId ? { ...c, split: { ...split, parts } } : c) });
-        return { ok: true };
+          return { ok: true };
       },
       finalizeComandaSplitPart: async (comandaId, partIndex, payment) => {
         const state = get();
@@ -1769,6 +1777,32 @@ export const useAppStore = create<AppStore>()(
       toggleEmployeeActive: (id) => set((state) => ({
         employees: state.employees.map((e) => e.id === id ? { ...e, active: !e.active } : e),
       })),
+      addJobPosition: (position) => set((state) => ({
+        jobPositions: [
+          ...state.jobPositions,
+          { ...position, id: newEntityId("job-position"), createdAt: new Date().toISOString() },
+        ],
+      })),
+      updateJobPosition: (id, patch) => set((state) => ({
+        jobPositions: state.jobPositions.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+      })),
+      removeJobPosition: (id) => {
+        const state = get();
+        const linked = state.employees.filter((e) => e.jobPositionId === id);
+        if (linked.length) {
+          return {
+            ok: false,
+            error: `Não é possível excluir: ${linked.length} funcionário(s) com este cargo.`,
+          };
+        }
+        set({ jobPositions: state.jobPositions.filter((p) => p.id !== id) });
+        return { ok: true };
+      },
+      toggleJobPositionActive: (id) => set((state) => ({
+        jobPositions: state.jobPositions.map((p) =>
+          p.id === id ? { ...p, active: !p.active } : p,
+        ),
+      })),
       addSchedule: (schedule) => set((state) => ({
         schedules: [...state.schedules, { ...schedule, id: newEntityId("schedule") }],
       })),
@@ -1843,6 +1877,7 @@ export const useAppStore = create<AppStore>()(
         cashMovements: state.cashMovements,
         displayTvs: state.displayTvs,
         employees: state.employees,
+        jobPositions: state.jobPositions,
         schedules: state.schedules,
         timeOff: state.timeOff,
         punches: state.punches,
@@ -1862,11 +1897,11 @@ export const useAppStore = create<AppStore>()(
           comandas = legacy.tables.map((table, index) => {
             const openedAt = table.openedAt ?? new Date().toISOString();
             const built = buildDailyComandaCode(new Date(openedAt), index + 1);
-            return {
+                  return {
               id: newEntityId("legacy-comanda"),
               ...built,
               status: table.status === "ocupada" ? "aberta" : "fechada",
-              openedAt,
+                    openedAt,
               closedAt: table.status === "ocupada" ? undefined : openedAt,
               lines: table.lines ?? [],
               customerNote: table.customerNote,

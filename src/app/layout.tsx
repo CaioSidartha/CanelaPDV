@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Lora, Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
+import { PRODUCT_NAME } from "@/config/brand";
 
 const nunitoSans = Nunito_Sans({
   subsets: ["latin"],
@@ -18,8 +19,8 @@ const lora = Lora({
 
 export const metadata: Metadata = {
   title: {
-    default: "Canela Store",
-    template: "%s · Canela",
+    default: PRODUCT_NAME,
+    template: `%s · ${PRODUCT_NAME}`,
   },
   description: "PDV, estoque e gestão — Canela",
   icons: { icon: "/brand/canela-icon.png", apple: "/brand/canela-icon.png" },

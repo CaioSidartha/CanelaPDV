@@ -1,236 +1,205 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Plus, Trash2, User } from "lucide-react";
+import {
+  EmployeeFormPanel,
+  employeeFormFromRecord,
+  type EmployeeFormValues,
+} from "@/components/employees/EmployeeFormPanel";
+import { employeeRoleLabel, employeeSchedule } from "@/lib/employee-schedule";
 import { useAppStore } from "@/store/useAppStore";
-import type { Employee, TimeSchedule, Weekday } from "@/types";
-
-const weekdays: { id: Weekday; label: string }[] = [
-  { id: "seg", label: "Seg" },
-  { id: "ter", label: "Ter" },
-  { id: "qua", label: "Qua" },
-  { id: "qui", label: "Qui" },
-  { id: "sex", label: "Sex" },
-  { id: "sab", label: "Sáb" },
-  { id: "dom", label: "Dom" },
-];
-
-function summarizeSchedule(schedule: TimeSchedule | undefined): string {
-  if (!schedule) return "—";
-  const days = weekdays
-    .filter((d) => (schedule.days[d.id]?.length ?? 0) > 0)
-    .map((d) => d.label)
-    .join(", ");
-  return days || "—";
-}
+import type { Employee } from "@/types";
 
 export function EmployeeAdminPanel() {
   const employees = useAppStore((s) => s.employees);
+  const jobPositions = useAppStore((s) => s.jobPositions);
   const schedules = useAppStore((s) => s.schedules);
   const addEmployee = useAppStore((s) => s.addEmployee);
   const updateEmployee = useAppStore((s) => s.updateEmployee);
   const removeEmployee = useAppStore((s) => s.removeEmployee);
   const toggleEmployeeActive = useAppStore((s) => s.toggleEmployeeActive);
 
-  const [empName, setEmpName] = useState("");
-  const [empRegistry, setEmpRegistry] = useState("");
-  const [empRole, setEmpRole] = useState("");
-  const [empScheduleId, setEmpScheduleId] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
 
-  const scheduleById = useMemo(
-    () => new Map(schedules.map((s) => [s.id, s])),
-    [schedules],
+  const sorted = useMemo(
+    () => employees.slice().sort((a, b) => a.name.localeCompare(b.name, "pt-BR")),
+    [employees],
   );
 
-  const resetForm = () => {
-    setEmpName("");
-    setEmpRegistry("");
-    setEmpRole("");
-    setEmpScheduleId("");
-    setEditingId(null);
+  const selected = selectedId ? employees.find((e) => e.id === selectedId) : undefined;
+
+  const resetSelection = () => {
+    setSelectedId(null);
+    setCreating(false);
     setFormErr(null);
   };
 
-  const startEdit = (e: Employee) => {
-    setEditingId(e.id);
-    setEmpName(e.name);
-    setEmpRegistry(e.registry ?? e.clockCode);
-    setEmpRole(e.role ?? "");
-    setEmpScheduleId(e.scheduleId ?? "");
+  const saveForm = (values: EmployeeFormValues) => {
     setFormErr(null);
-  };
-
-  const saveForm = () => {
-    setFormErr(null);
-    const name = empName.trim();
-    const reg = empRegistry.trim();
+    const name = values.name.trim();
+    const reg = values.registry.trim();
     if (!name || !reg) {
       setFormErr("Informe nome e matrícula.");
       return;
     }
-    if (editingId) {
-      updateEmployee(editingId, {
-        name,
-        registry: reg,
-        clockCode: reg,
-        role: empRole.trim() || undefined,
-        scheduleId: empScheduleId || undefined,
-      });
-      resetForm();
+    const position = values.jobPositionId
+      ? jobPositions.find((p) => p.id === values.jobPositionId)
+      : undefined;
+    const roleLabel = position?.name;
+    const patch = {
+      name,
+      registry: reg,
+      clockCode: reg,
+      cpf: values.cpf.trim() || undefined,
+      jobPositionId: values.jobPositionId || undefined,
+      role: roleLabel,
+      scheduleId: undefined as string | undefined,
+      photoUrl: values.photoUrl || undefined,
+      active: values.active,
+    };
+
+    if (selected) {
+      updateEmployee(selected.id, patch);
+      resetSelection();
       return;
     }
     addEmployee({
-      name,
-      registry: reg,
-      role: empRole.trim() || undefined,
-      scheduleId: empScheduleId || undefined,
-      clockCode: reg,
-      active: true,
-      cpf: undefined,
+      ...patch,
       tenantId: undefined,
       empresaId: undefined,
     });
-    resetForm();
+    resetSelection();
   };
 
   const deleteEmployee = (e: Employee) => {
     if (!window.confirm(`Excluir o funcionário "${e.name}"?`)) return;
     const r = removeEmployee(e.id);
     if (!r.ok) setFormErr(r.error);
-    else if (editingId === e.id) resetForm();
+    else if (selectedId === e.id) resetSelection();
   };
 
+  const showForm = creating || selected;
+
   return (
-    <section className="space-y-6">
-      <div className="panel-glass p-6">
-        <div className="panel-glass-inner">
-          <h2 className="text-lg font-semibold text-zinc-100">
-            {editingId ? "Editar funcionário" : "Cadastrar funcionário"}
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Quem estiver ativo poderá ser escolhido na abertura do turno de caixa.
-          </p>
-          {formErr && (
-            <p className="mt-3 rounded-lg border border-red-500/30 bg-red-950/35 px-3 py-2 text-sm text-red-200">
+    <section className="grid gap-6 lg:grid-cols-[minmax(260px,320px)_1fr]">
+      <div className="panel-glass p-4">
+        <div className="panel-glass-inner flex flex-col">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-zinc-100">Equipe</h2>
+            <button
+              type="button"
+              onClick={() => {
+                setCreating(true);
+                setSelectedId(null);
+                setFormErr(null);
+              }}
+              className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-light"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Novo
+            </button>
+          </div>
+          {formErr && !showForm && (
+            <p className="mb-2 rounded-lg border border-red-500/30 bg-red-950/35 px-2 py-1.5 text-xs text-red-200">
               {formErr}
             </p>
           )}
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs text-zinc-500">Nome</label>
-              <Input value={empName} onChange={(e) => setEmpName(e.target.value)} placeholder="Nome completo" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-zinc-500">Matrícula</label>
-              <Input value={empRegistry} onChange={(e) => setEmpRegistry(e.target.value)} placeholder="001" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-zinc-500">Cargo</label>
-              <Input value={empRole} onChange={(e) => setEmpRole(e.target.value)} placeholder="Atendente" />
-            </div>
-            <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs text-zinc-500">Carga horária (ponto)</label>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-zinc-950/50 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-brand focus:ring-2 focus:ring-orange-500/25"
-                value={empScheduleId}
-                onChange={(e) => setEmpScheduleId(e.target.value)}
-              >
-                <option value="">—</option>
-                {schedules.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="lg:col-span-2 flex flex-wrap items-end justify-end gap-2">
-              {editingId && (
-                <Button type="button" variant="secondary" onClick={resetForm}>
-                  Cancelar
-                </Button>
-              )}
-              <Button type="button" onClick={saveForm}>
-                {editingId ? "Atualizar" : "Adicionar"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="panel-glass p-6">
-        <div className="panel-glass-inner">
-          <h2 className="text-lg font-semibold text-zinc-100">Funcionários</h2>
-          {employees.length === 0 ? (
-            <p className="mt-3 text-sm text-zinc-500">Nenhum funcionário cadastrado.</p>
+          {sorted.length === 0 ? (
+            <p className="text-sm text-zinc-500">Nenhum funcionário cadastrado.</p>
           ) : (
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {employees
-                .slice()
-                .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
-                .map((e) => {
-                  const sch = e.scheduleId ? scheduleById.get(e.scheduleId) : undefined;
-                  return (
-                    <li
-                      key={e.id}
-                      className={`rounded-2xl border bg-zinc-950/30 p-4 shadow-sm ${
-                        editingId === e.id
-                          ? "border-brand/50 ring-1 ring-brand/30"
-                          : "border-white/10"
+            <ul className="max-h-[min(70vh,520px)] space-y-2 overflow-y-auto pr-1">
+              {sorted.map((e) => {
+                const sch = employeeSchedule(e, jobPositions, schedules);
+                const active = selectedId === e.id;
+                return (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedId(e.id);
+                        setCreating(false);
+                        setFormErr(null);
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                        active
+                          ? "border-brand/50 bg-brand/10"
+                          : "border-white/10 bg-zinc-950/30 hover:border-white/20"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(e)}
-                          className="min-w-0 flex-1 text-left"
-                        >
-                          <p className="flex items-center gap-1.5 truncate font-semibold text-zinc-100">
-                            <Pencil className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
-                            {e.name}
-                          </p>
-                          <p className="text-xs text-zinc-500">
-                            Matrícula <span className="font-mono">{e.registry ?? "—"}</span> · Código{" "}
-                            <span className="font-mono">{e.clockCode}</span>
-                          </p>
-                          <p className="mt-1 text-xs text-zinc-500">{e.role ?? "—"}</p>
-                        </button>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => deleteEmployee(e)}
-                            className="rounded-lg p-1.5 text-zinc-500 hover:bg-red-500/10 hover:text-red-300"
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleEmployeeActive(e.id)}
-                            className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
-                              e.active
-                                ? "bg-emerald-500/15 text-emerald-300"
-                                : "bg-zinc-800 text-zinc-400"
-                            }`}
-                          >
-                            {e.active ? "Ativo" : "Inativo"}
-                          </button>
-                        </div>
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-zinc-900">
+                        {e.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={e.photoUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <User className="h-5 w-5 text-zinc-600" />
+                        )}
                       </div>
-                      <div className="mt-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Carga</p>
-                        <p className="text-sm text-zinc-300">{sch?.name ?? "—"}</p>
-                        <p className="mt-1 text-xs text-zinc-500">{summarizeSchedule(sch)}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-zinc-100">{e.name}</p>
+                        <p className="truncate text-xs text-zinc-500">
+                          {employeeRoleLabel(e, jobPositions)} · {sch?.name ?? "sem horário"}
+                        </p>
                       </div>
-                    </li>
-                  );
-                })}
+                      {!e.active && (
+                        <span className="shrink-0 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-400">
+                          Inativo
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
+      </div>
+
+      <div className="min-w-0">
+        {formErr && showForm && (
+          <p className="mb-3 rounded-lg border border-red-500/30 bg-red-950/35 px-3 py-2 text-sm text-red-200">
+            {formErr}
+          </p>
+        )}
+        {showForm ? (
+          <div className="space-y-3">
+            {selected && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => deleteEmployee(selected)}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-red-400 hover:bg-red-500/10"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Excluir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleEmployeeActive(selected.id)}
+                  className="ml-2 rounded-lg border border-white/10 px-2 py-1 text-xs text-zinc-400 hover:bg-white/5"
+                >
+                  {selected.active ? "Desativar" : "Ativar"}
+                </button>
+              </div>
+            )}
+            <EmployeeFormPanel
+              key={selected?.id ?? "new"}
+              initial={selected ? employeeFormFromRecord(selected) : undefined}
+              submitLabel={selected ? "Atualizar ficha" : "Adicionar funcionário"}
+              onCancel={resetSelection}
+              onSubmit={saveForm}
+            />
+          </div>
+        ) : (
+          <div className="panel-glass flex min-h-[280px] items-center justify-center p-8">
+            <p className="max-w-sm text-center text-sm text-zinc-500">
+              Selecione um colaborador na lista ou clique em <strong className="text-zinc-300">Novo</strong> para
+              abrir a ficha no mesmo padrão de produtos e fornecedores.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

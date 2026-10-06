@@ -1,4 +1,5 @@
 import { paymentMethodLabel } from "@/components/payment/PaymentMethodDisplay";
+import { DEMO_STORE_NAME } from "@/config/brand";
 import { formatBRL } from "@/lib/utils";
 import type { CompanySettings, CompletedSale } from "@/types";
 
@@ -62,7 +63,7 @@ export function buildSaleReceiptHtml(company: CompanySettings, sale: CompletedSa
 </head>
 <body>
   <div class="center">
-    <h1>${escapeHtml(company.name || "Canela Store")}</h1>
+    <h1>${escapeHtml(company.name || DEMO_STORE_NAME)}</h1>
     <div class="muted">${escapeHtml(company.address || "")}</div>
     <div class="muted">CNPJ ${escapeHtml(company.cnpj || "—")} · ${escapeHtml(company.phone || "")}</div>
     <div class="muted">${escapeHtml(when)}</div>
