@@ -7,5 +7,8 @@ export async function GET() {
     enabled,
     mode: enabled ? "lan-sqlite" : "browser-local",
     comandas: enabled,
+    catalog: enabled,
+    pdv: enabled,
+    bundle: enabled,
   });
 }

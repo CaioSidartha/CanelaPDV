@@ -27,6 +27,15 @@ function ensureSchema(sqlite: Database.Database) {
       revision INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS store_comandas_status_idx ON store_comandas(status);
+    CREATE TABLE IF NOT EXISTS store_entities (
+      kind TEXT NOT NULL,
+      id TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      revision INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (kind, id)
+    );
+    CREATE INDEX IF NOT EXISTS store_entities_kind_idx ON store_entities(kind);
   `);
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import type { StoreBundle, StoreBundlePatch } from "@/lib/local-store/types";
 import type { ComandaState } from "@/types";
 
 let _lanStoreEnabled: boolean | null = null;
@@ -24,20 +25,29 @@ export function isLanStoreCached(): boolean {
   return _lanStoreEnabled === true;
 }
 
+export async function fetchLanBundle(): Promise<StoreBundle | null> {
+  const res = await fetch("/api/store/bundle", { cache: "no-store" });
+  if (!res.ok) return null;
+  return (await res.json()) as StoreBundle;
+}
+
+export async function pushLanBundlePatch(patch: StoreBundlePatch): Promise<StoreBundle | null> {
+  const res = await fetch("/api/store/bundle", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) return null;
+  return (await res.json()) as StoreBundle;
+}
+
+/** Legado — preferir bundle. */
 export async function fetchLanComandas(): Promise<ComandaState[]> {
-  const res = await fetch("/api/store/comandas", { cache: "no-store" });
-  if (!res.ok) return [];
-  const data = (await res.json()) as { comandas?: ComandaState[] };
-  return data.comandas ?? [];
+  const bundle = await fetchLanBundle();
+  return bundle?.comandas ?? [];
 }
 
 export async function pushLanComanda(comanda: ComandaState): Promise<ComandaState | null> {
-  const res = await fetch("/api/store/comandas", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ comanda }),
-  });
-  if (!res.ok) return null;
-  const data = (await res.json()) as { comanda?: ComandaState };
-  return data.comanda ?? null;
+  const bundle = await pushLanBundlePatch({ comandas: [comanda] });
+  return bundle?.comandas.find((c) => c.id === comanda.id) ?? null;
 }

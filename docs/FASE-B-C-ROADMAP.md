@@ -16,7 +16,7 @@
 - O instalador inclui o servidor em `resources/standalone`.
 - No Electron empacotado, `electron/embedded-server.js` sobe `127.0.0.1` e a janela carrega `/login` local.
 - Consulta de **nova versão do .exe** continua em `https://canelapdv.onrender.com/api/desktop/release`.
-- **Comandas na LAN:** SQLite em `canela-store.db` no servidor (`CANELA_STORE_DB_PATH`); terminais sincronizam via `/api/store/comandas` (~1,5s). Demais módulos ainda no localStorage — migração em andamento.
+- **PDV na LAN (SQLite):** `canela-store.db` no servidor — comandas, categorias, produtos, vendas, turno/caixa e movimentos de estoque via `GET/PUT /api/store/bundle` (~1,5s). Carrinho de balcão continua local até finalizar (a venda vai para o bundle).
 
 **Gerar instalador:** `npm run release:win`
 
