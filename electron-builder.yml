@@ -32,6 +32,6 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "shortcutName": "Canela",
-    "include": "build/installer.nsh"
+    "include": "electron/installer.nsh"
   }
 }
