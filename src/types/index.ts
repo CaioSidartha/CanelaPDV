@@ -250,6 +250,9 @@ export interface ComandaState {
   lastItemCount?: number;
   /** Snapshot dos itens consumidos ao fechar (histórico). */
   lastClosedLines?: CartLine[];
+  /** Réplica LAN — última gravação no SQLite do servidor. */
+  storeUpdatedAt?: string;
+  storeRevision?: number;
 }
 
 /** Registro de auditoria de comandas (ex.: exclusão/cancelamento). */

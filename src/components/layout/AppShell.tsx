@@ -6,6 +6,7 @@ import { SurfaceRestrictedBanner, SurfaceRouteGuard } from "@/components/auth/Su
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { AppDesktopBar } from "@/components/layout/AppDesktopBar";
 import { DesktopDeviceSetupWizard } from "@/components/desktop/DesktopDeviceSetupWizard";
+import { LanComandaSync } from "@/components/store/LanComandaSync";
 import { TenantPlanBanner } from "@/components/tenant/TenantPlanBanner";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <AuthGate>
       <SurfaceRouteGuard>
         <DesktopDeviceSetupWizard />
+        <LanComandaSync />
         <div className="flex h-screen overflow-hidden bg-background print:block print:h-auto print:overflow-visible print:bg-white">
           <AppSidebar />
           <main className="min-h-0 flex-1 overflow-y-auto text-zinc-200 print:overflow-visible print:text-black">

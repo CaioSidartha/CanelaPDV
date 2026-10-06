@@ -5,6 +5,7 @@ const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  serverExternalPackages: ["better-sqlite3"],
   reactStrictMode: true,
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.APP_VERSION || pkg.version || "0.0.0",

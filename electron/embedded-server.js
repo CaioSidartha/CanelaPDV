@@ -63,9 +63,9 @@ function waitForHealth(baseUrl, attempts = 90) {
  * @returns {Promise<{ baseUrl: string; port: number; hostname: string }>}
  */
 async function startEmbeddedNextServer(opts = {}) {
+  const fs = require("fs");
   const dir = standaloneDir();
   const serverPath = path.join(dir, "server.js");
-  const fs = require("fs");
   if (!fs.existsSync(serverPath)) {
     throw new Error(`Bundle local ausente (${serverPath}). Gere o instalador com npm run release:win.`);
   }
@@ -76,6 +76,9 @@ async function startEmbeddedNextServer(opts = {}) {
   const healthHost = hostname === "0.0.0.0" ? "127.0.0.1" : hostname;
   const baseUrl = `http://${healthHost}:${port}`;
 
+  const storeDbPath = path.join(app.getPath("userData"), "canela-store.db");
+  fs.mkdirSync(path.dirname(storeDbPath), { recursive: true });
+
   serverChild = spawn(process.execPath, [serverPath], {
     cwd: dir,
     env: {
@@ -85,6 +88,7 @@ async function startEmbeddedNextServer(opts = {}) {
       HOSTNAME: hostname,
       PORT: String(port),
       CANELA_EMBEDDED: "1",
+      CANELA_STORE_DB_PATH: storeDbPath,
     },
     stdio: "pipe",
   });
