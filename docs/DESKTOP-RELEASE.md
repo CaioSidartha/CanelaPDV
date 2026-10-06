@@ -22,4 +22,6 @@ Artefatos em `dist-electron/`. Suba o `.exe` (GitHub Releases) e cole o link no 
 
 - `DESKTOP_WINDOWS_URL` — fallback se não houver valor no banco
 - `DESKTOP_APP_VERSION` — fallback da versão desktop
-- `PADARIA_APP_URL` — URL do Electron em produção (padrão: canelapdv.onrender.com)
+- `PADARIA_APP_URL` — força o app a abrir uma URL remota (ignora servidor embutido)
+- `PADARIA_RELEASE_URL` — só para checar versão/download do instalador (padrão: canelapdv.onrender.com)
+- Instalador empacotado usa **servidor Next local**; ver `docs/FASE-B-C-ROADMAP.md`

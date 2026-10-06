@@ -1,14 +1,31 @@
 /**
  * Processo principal Electron — casca do PDV baixável.
  * Dev: carrega http://localhost:3000 (Next)
- * Prod: sobe next start ou aponta para out/ (evolução)
+ * Prod empacotado: servidor Next standalone local (sem Render)
+ * Override: PADARIA_APP_URL aponta para URL remota
  */
 const { app, BrowserWindow, shell, ipcMain } = require("electron");
 const path = require("path");
+const {
+  startEmbeddedNextServer,
+  stopEmbeddedNextServer,
+  standaloneDir,
+} = require("./embedded-server");
+const fs = require("fs");
 
 const isDev = !app.isPackaged;
 const DEV_URL = process.env.PADARIA_DEV_URL || "http://localhost:3000";
-const PROD_URL = (process.env.PADARIA_APP_URL || "https://canelapdv.onrender.com").replace(/\/$/, "");
+const REMOTE_APP_URL = (process.env.PADARIA_APP_URL || "https://canelapdv.onrender.com").replace(
+  /\/$/,
+  "",
+);
+/** Manifest de versão / download do .exe — sempre na nuvem. */
+const RELEASE_CHECK_URL = (
+  process.env.PADARIA_RELEASE_URL || "https://canelapdv.onrender.com"
+).replace(/\/$/, "");
+
+/** @type {string | null} */
+let appBaseUrl = null;
 
 function compareSemver(a, b) {
   const pa = String(a).split(".").map((x) => parseInt(x, 10) || 0);
@@ -21,10 +38,29 @@ function compareSemver(a, b) {
   return 0;
 }
 
+function shouldUseEmbeddedServer() {
+  if (process.env.PADARIA_APP_URL) return false;
+  if (process.env.PADARIA_FORCE_REMOTE === "1") return false;
+  if (isDev) return process.env.PADARIA_USE_EMBEDDED === "1";
+  const serverJs = path.join(standaloneDir(), "server.js");
+  return fs.existsSync(serverJs);
+}
+
+async function resolveAppBaseUrl() {
+  if (isDev) return DEV_URL.replace(/\/$/, "");
+  if (!shouldUseEmbeddedServer()) return REMOTE_APP_URL;
+  const { baseUrl } = await startEmbeddedNextServer();
+  return baseUrl;
+}
+
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
 
-function createWindow() {
+async function createWindow() {
+  if (!appBaseUrl) {
+    appBaseUrl = await resolveAppBaseUrl();
+  }
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -51,19 +87,27 @@ function createWindow() {
     return { action: "deny" };
   });
 
-  if (isDev) {
-    mainWindow.loadURL(DEV_URL);
-  } else {
-    mainWindow.loadURL(`${PROD_URL}/login`);
-  }
+  await mainWindow.loadURL(`${appBaseUrl}/login`);
 }
 
 app.whenReady().then(() => {
-  createWindow();
+  createWindow().catch((err) => {
+    console.error(err);
+    app.quit();
+  });
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow().catch((err) => {
+        console.error(err);
+        app.quit();
+      });
+    }
   });
+});
+
+app.on("before-quit", () => {
+  stopEmbeddedNextServer();
 });
 
 app.on("window-all-closed", () => {
@@ -74,13 +118,14 @@ ipcMain.handle("app:getInfo", () => ({
   version: app.getVersion(),
   isPackaged: app.isPackaged,
   platform: process.platform,
+  embedded: shouldUseEmbeddedServer(),
+  appBaseUrl: appBaseUrl || REMOTE_APP_URL,
 }));
 
 ipcMain.handle("app:checkForUpdates", async () => {
-  const base = isDev ? DEV_URL.replace(/\/$/, "") : PROD_URL;
   const installedVersion = app.getVersion();
   try {
-    const res = await fetch(`${base}/api/desktop/release`, { cache: "no-store" });
+    const res = await fetch(`${RELEASE_CHECK_URL}/api/desktop/release`, { cache: "no-store" });
     if (!res.ok) {
       return { error: "Não foi possível consultar o servidor de versões." };
     }

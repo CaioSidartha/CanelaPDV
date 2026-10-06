@@ -21,7 +21,8 @@
     "electron:dev": "electron .",
     "desktop:dev": "node electron/dev-runner.js",
     "dist:win": "electron-builder --win --config electron-builder.yml",
-    "release:win": "npm run build && npm run dist:win",
+    "prepare:electron": "node scripts/prepare-electron-standalone.mjs",
+    "release:win": "npm run build && npm run prepare:electron && npm run dist:win",
     "db:migrate": "node --env-file=.env scripts/db-migrate.mjs",
     "db:seed": "node --env-file=.env scripts/db-seed.mjs",
     "db:push": "drizzle-kit push"

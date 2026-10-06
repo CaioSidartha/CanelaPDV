@@ -7,13 +7,18 @@
   },
   "files": [
     "electron/**/*",
-    "package.json",
-    ".next/**/*",
-    "public/**/*",
-    "node_modules/**/*",
-    "!node_modules/.cache/**/*"
+    "package.json"
   ],
-  "extraResources": [],
+  "extraResources": [
+    {
+      "from": ".next/standalone",
+      "to": "standalone",
+      "filter": ["**/*"]
+    }
+  ],
+  "asarUnpack": [
+    "**/standalone/**"
+  ],
   "win": {
     "target": [
       {

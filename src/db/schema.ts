@@ -111,6 +111,16 @@ export const leads = pgTable(
   (t) => [index("leads_created_idx").on(t.createdAt)],
 );
 
+/** Snapshot operacional da loja (Fase B — sync híbrido / backup na nuvem). */
+export const tenantWorkspaces = pgTable("tenant_workspaces", {
+  tenantId: uuid("tenant_id")
+    .primaryKey()
+    .references(() => tenants.id, { onDelete: "cascade" }),
+  payload: jsonb("payload").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: uuid("updated_by"),
+});
+
 export const auditLog = pgTable(
   "audit_log",
   {
